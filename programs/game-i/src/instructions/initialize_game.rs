@@ -7,8 +7,7 @@ use anchor_lang::{
 };
 
 use crate::{
-    GameError, GameSession, GlobalState, HASH_LENGTH, INITIALIZE_GAME_ACTION, 
-    MAX_BPS, MAX_METADATA_LENGTH, is_signature_valid
+    GameError, GameSession, GlobalState, HASH_LENGTH, INITIALIZE_GAME_ACTION, MAX_BPS, MAX_METADATA_LENGTH, SEPARATOR, is_signature_valid
 };
 
 /// Arguments for initializing a new game session.
@@ -109,9 +108,12 @@ pub fn checks(
     );
 
     // Verify the deposit is within the allowed maximum deposit.
+    let current_max_deposit = ctx.accounts.vault.lamports().
+        checked_mul(u64::from(ctx.accounts.global_state.max_deposit)).
+        ok_or(ProgramError::ArithmeticOverflow)?.saturating_div(MAX_BPS);
+
     require_gt!(
-        ctx.accounts.vault.lamports().checked_mul(u64::from(ctx.accounts.global_state.max_deposit)).
-        ok_or(ProgramError::ArithmeticOverflow)?.saturating_div(MAX_BPS),
+        current_max_deposit,
         args.deposit,
         GameError::DepositExceedsMaximum
     );
@@ -122,13 +124,18 @@ pub fn checks(
     // Build an array of references to the data slices that make up the commitment message.
     let commitment_message = [
         INITIALIZE_GAME_ACTION.as_bytes(),
+        SEPARATOR.as_bytes(),
         // The commitment commits to the game's public and private configuration seeds which
         // are for example used to derive the tile counts and the death tile positions, so
         //  they are all implictly included in the commitment.
         &args.commitment,
+        SEPARATOR.as_bytes(),
         &deposit,
+        SEPARATOR.as_bytes(),
         &deadline,
+        SEPARATOR.as_bytes(),
         args.game_metadata.as_bytes(),
+        SEPARATOR.as_bytes(),
         ctx.accounts.player.key.as_array().as_ref(),
     ];
 

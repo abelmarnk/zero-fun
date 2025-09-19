@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::GlobalState;
+use crate::{GameError, GlobalState};
 
 /// Enum representing the possible updates to the global state.
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
@@ -41,7 +41,7 @@ pub fn checks(
     require_keys_eq!(
         ctx.accounts.admin.key(),
         ctx.accounts.global_state.admin,
-        crate::GameError::InvalidAdmin
+        GameError::InvalidAdmin
     );
 
     Ok(())

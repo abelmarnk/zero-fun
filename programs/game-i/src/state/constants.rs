@@ -8,6 +8,8 @@ pub const MAX_MOVE_COUNT:usize = 32;
 
 pub const MAX_METADATA_LENGTH:usize = 64;
 
+pub const SEPARATOR:&str = "::";
+
 pub const INITIALIZE_GAME_ACTION:&str = "initialize-game";
 
 pub const FINALIZE_WIN_ACTION:&str = "finalize-win";

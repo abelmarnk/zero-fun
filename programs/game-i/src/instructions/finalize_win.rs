@@ -4,7 +4,7 @@ use anchor_lang::{
 };
 
 use crate::{
-    FINALIZE_WIN_ACTION, GameError, GameSession, GameStatus, GlobalState, HASH_LENGTH, MAX_BPS, MAX_MOVE_COUNT, is_signature_valid
+    FINALIZE_WIN_ACTION, GameError, GameSession, GameStatus, GlobalState, HASH_LENGTH, MAX_BPS, MAX_MOVE_COUNT, SEPARATOR, is_signature_valid
 };
 
 /// Arguments for finalizing a game session as a win.
@@ -116,9 +116,13 @@ pub fn checks(
     // Build an array of references to the data slices that make up the commitment message.
     let commitment = [
         FINALIZE_WIN_ACTION.as_bytes(),
+        SEPARATOR.as_bytes(),
         &payout,
+        SEPARATOR.as_bytes(),
         &deadline,
+        SEPARATOR.as_bytes(),
         &args.finalized_game_state,
+        SEPARATOR.as_bytes(),
         // The commitment commits to the game's public and private configuration seeds which
         // are for example used to derive the tile counts and the death tile positions, so
         //  they are all implictly included in the commitment.
