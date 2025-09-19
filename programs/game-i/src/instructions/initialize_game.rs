@@ -189,7 +189,7 @@ pub fn initialize_game_handler(
 mod tests{
     use super::*;
 
-    pub fn is_sized_type<T:Sized + Copy>(_:&T){}
+    pub const fn is_sized_type<T:Sized + Copy>(_:&T){}
 
     #[test]
     pub fn test_hash_args(){
