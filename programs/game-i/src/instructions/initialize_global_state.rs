@@ -48,7 +48,7 @@ pub struct InitializeGlobalStateCtx<'info> {
 
 #[inline(always)] // This function is only called once, in the handler.
 /// Perform preliminary checks, other checks may be performed later in the handler.
-pub fn checks(
+fn checks(
     ctx: &Context<InitializeGlobalStateCtx>
 )->Result<()>{
     // Ensure the initializer is the bootstrap key to prevent unauthorized initialization.

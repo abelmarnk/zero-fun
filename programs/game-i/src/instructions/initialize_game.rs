@@ -7,7 +7,8 @@ use anchor_lang::{
 };
 
 use crate::{
-    GameError, GameSession, GlobalState, HASH_LENGTH, INITIALIZE_GAME_ACTION, MAX_BPS, MAX_METADATA_LENGTH, SEPARATOR, is_signature_valid
+    GameError, GameSession, GlobalState, HASH_LENGTH, INITIALIZE_GAME_ACTION, 
+    MAX_BPS, MAX_METADATA_LENGTH, is_signature_valid
 };
 
 /// Arguments for initializing a new game session.
@@ -81,7 +82,7 @@ pub struct InitializeGameCtx<'info> {
 
 #[inline(always)] // This function is only called once, in the handler.
 /// Perform the preliminary checks, other checks may be perfomed later in the handler.
-pub fn checks(
+fn checks(
     ctx: &Context<InitializeGameCtx>,
     args: &InitializeGameArgs,
     current_timestamp:i64

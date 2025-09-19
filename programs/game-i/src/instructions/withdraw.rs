@@ -39,7 +39,7 @@ pub struct WithdrawCtx<'info> {
 
 #[inline(always)] // This function is only called once, in the handler.
 /// Perform the preliminary checks, other checks may be perfomed later in the handler.
-pub fn checks(
+fn checks(
     ctx: &Context<WithdrawCtx>
 ) -> Result<()> {
     // Only the current admin can authorize withdrawals.
