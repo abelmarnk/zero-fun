@@ -4,7 +4,8 @@ use anchor_lang::{
 };
 
 use crate::{
-    FINALIZE_WIN_ACTION, GameError, GameSession, GameStatus, GlobalState, HASH_LENGTH, MAX_BPS, MAX_MOVE_COUNT, SEPARATOR, is_signature_valid
+    FINALIZE_WIN_ACTION, GameError, GameSession, GameStatus, 
+    GlobalState, HASH_LENGTH, MAX_BPS, MAX_MOVE_COUNT, is_signature_valid
 };
 
 /// Arguments for finalizing a game session as a win.
@@ -17,7 +18,7 @@ use crate::{
 ///   after finalization. If true, the account will be closed and remaining lamports will
 ///   be transferred to the player. If false, the account will remain open with updated
 ///   state.
-#[derive(AnchorDeserialize, AnchorSerialize, Clone)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Default)]
 pub struct FinalizeWinArgs {
     pub payout:u64,
     pub private_config_seed:[u8;HASH_LENGTH],
@@ -110,19 +111,19 @@ pub fn checks(
         GameError::PayoutExceedsMaximum
     );
 
-    let deadline = args.deadline.to_le_bytes();
+
+    // IMPORTANT: Do not change the commitment without taking into consideration the fact that
+    // the message could be manipulated, if the field lengths are variable, in that case length
+    // prefixes would need to be added, the fields are fixed here so they are left as is.
+    {let deadline = args.deadline.to_le_bytes();
     let payout = args.payout.to_le_bytes();
 
     // Build an array of references to the data slices that make up the commitment message.
     let commitment = [
         FINALIZE_WIN_ACTION.as_bytes(),
-        SEPARATOR.as_bytes(),
         &payout,
-        SEPARATOR.as_bytes(),
         &deadline,
-        SEPARATOR.as_bytes(),
         &args.finalized_game_state,
-        SEPARATOR.as_bytes(),
         // The commitment commits to the game's public and private configuration seeds which
         // are for example used to derive the tile counts and the death tile positions, so
         //  they are all implictly included in the commitment.
@@ -134,9 +135,7 @@ pub fn checks(
         &ctx.accounts.instructions_sysvar.to_account_info(),
         &commitment,
         &ctx.accounts.global_state.message_signer
-    )?;
-
-    Ok(())
+    )}
 }
 
 pub fn finalize_win_handler(
@@ -166,4 +165,20 @@ pub fn finalize_win_handler(
     **ctx.accounts.player.try_borrow_mut_lamports()? += args.payout;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    pub fn is_sized_type<T:Sized + Copy>(_:&T){}
+
+    #[test]
+    pub fn test_hash_args(){
+        let dummy_arg = FinalizeWinArgs::default();
+
+        is_sized_type(&dummy_arg.payout);
+        is_sized_type(&dummy_arg.deadline);
+        is_sized_type(&dummy_arg.finalized_game_state);
+    }
 }

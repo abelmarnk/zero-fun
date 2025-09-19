@@ -6,7 +6,7 @@ use crate::GlobalState;
 /// it is delibrately left empty here to avoid accidental usage, the complier will complain
 /// if it is not replaced.
 /// It is only to be used once, to initialize the global state.
-const BOOTSTRAP_KEY:Pubkey = pubkey!("");
+const BOOTSTRAP_KEY:Pubkey = pubkey!("5e4vTmm5pcUFHPr34rtrpu33kXC5nG4eN7JmkHhJpJsP");
 
 /// Arguments for initializing the global state.
 /// - admin: The admin's public key.

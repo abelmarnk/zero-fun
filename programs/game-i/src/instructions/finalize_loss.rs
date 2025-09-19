@@ -6,7 +6,7 @@ use anchor_lang::{
 };
 
 use crate::{
-    FINALIZE_LOSS_ACTION, SEPARATOR, GameError, GameSession, GameStatus, 
+    FINALIZE_LOSS_ACTION, GameError, GameSession, GameStatus, 
     GlobalState, HASH_LENGTH, MAX_MOVE_COUNT, is_signature_valid
 };
 
@@ -19,7 +19,7 @@ use crate::{
 ///   after finalization. If true, the account will be closed and remaining lamports will
 ///   be transferred to the player. If false, the account will remain open with updated
 ///   state.
-#[derive(AnchorDeserialize, AnchorSerialize, Clone)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Default)]
 pub struct FinalizeLossArgs {
     pub private_config_seed:[u8;HASH_LENGTH],
     pub finalized_game_state:[u8;MAX_MOVE_COUNT],
@@ -99,18 +99,17 @@ pub fn checks(
         GameError::InvalidPlayer
     );
 
+    {// IMPORTANT: Do not change the commitment without taking into consideration the fact that
+    // the message could be manipulated, if the field lengths are variable, in that case length
+    // prefixes would need to be added, the fields are fixed here so they are left as is.
+
     let deadline = args.deadline.to_le_bytes();
 
     // Build an array of references to the data slices that make up the commitment message.
-
-
     let commitment = [
         FINALIZE_LOSS_ACTION.as_bytes(),
-        SEPARATOR.as_bytes(),
         &deadline,
-        SEPARATOR.as_bytes(),
         &args.finalized_game_state,
-        SEPARATOR.as_bytes(),
         // The commitment commits to the game's public and private configuration seeds which
         // are for example used to derive the tile counts and the death tile positions, so
         //  they are all implictly included in the commitment.    
@@ -122,9 +121,7 @@ pub fn checks(
         &ctx.accounts.instructions_sysvar.to_account_info(),
         &commitment,
         &ctx.accounts.global_state.message_signer
-    )?;
-
-    Ok(())
+    )}
 }
 
 pub fn finalize_loss_handler(
@@ -149,4 +146,19 @@ pub fn finalize_loss_handler(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    pub fn is_sized_type<T:Sized + Copy>(_:&T){}
+
+    #[test]
+    pub fn test_hash_args(){
+        let dummy_arg = FinalizeLossArgs::default();
+
+        is_sized_type(&dummy_arg.deadline);
+        is_sized_type(&dummy_arg.finalized_game_state);
+    }
 }

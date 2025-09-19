@@ -19,7 +19,7 @@ use crate::{
 /// - deposit: The amount of lamports the player is depositing to play the game.
 /// - admin_signature: A signature from the game administrator authorizing the game
 ///   initialization. This is used to prevent unauthorized game sessions.
-#[derive(AnchorDeserialize, AnchorSerialize, Clone)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Default)]
 pub struct InitializeGameArgs {
     pub commitment: [u8; HASH_LENGTH],
     pub public_config_seed: [u8; HASH_LENGTH],
@@ -117,34 +117,33 @@ pub fn checks(
         args.deposit,
         GameError::DepositExceedsMaximum
     );
-
-    let deposit = args.deposit.to_le_bytes();
+    
+    // IMPORTANT: Do not change the commitment without taking into consideration the fact that
+    // the message could be manipulated, if the field lengths are variable, in that case length
+    // prefixes would need to be added, there is only one variable length field 
+    // here so they are left as is.
+    {let deposit = args.deposit.to_le_bytes();
     let deadline = args.deadline.to_le_bytes();
 
     // Build an array of references to the data slices that make up the commitment message.
-    let commitment_message = [
+    let commitment = [
         INITIALIZE_GAME_ACTION.as_bytes(),
-        SEPARATOR.as_bytes(),
         // The commitment commits to the game's public and private configuration seeds which
         // are for example used to derive the tile counts and the death tile positions, so
         //  they are all implictly included in the commitment.
         &args.commitment,
-        SEPARATOR.as_bytes(),
         &deposit,
-        SEPARATOR.as_bytes(),
         &deadline,
-        SEPARATOR.as_bytes(),
         args.game_metadata.as_bytes(),
-        SEPARATOR.as_bytes(),
         ctx.accounts.player.key.as_array().as_ref(),
     ];
 
     // Verify the admin's signature on the commitment message.
     is_signature_valid(
         &ctx.accounts.instructions_sysvar.to_account_info(),
-        &commitment_message,
+        &commitment,
         &ctx.accounts.global_state.message_signer,
-    )
+    )}
 }
 
 pub fn initialize_game_handler(
@@ -183,4 +182,22 @@ pub fn initialize_game_handler(
     )?;
 
     Ok(())
+}
+
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    pub fn is_sized_type<T:Sized + Copy>(_:&T){}
+
+    #[test]
+    pub fn test_hash_args(){
+        let dummy_arg = InitializeGameArgs::default();
+
+        is_sized_type(&dummy_arg.commitment);
+        is_sized_type(&dummy_arg.deadline);
+        is_sized_type(&dummy_arg.deposit);
+        is_sized_type(&dummy_arg.public_config_seed);
+    }
 }
