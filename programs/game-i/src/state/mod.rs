@@ -9,7 +9,3 @@ pub use admin::*;
 
 pub mod constants;
 pub use constants::*;
-
-// Add optional logging
-pub mod event;
-pub use event::*;
