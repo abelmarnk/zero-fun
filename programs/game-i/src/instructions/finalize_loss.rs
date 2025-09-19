@@ -33,8 +33,6 @@ pub struct FinalizeLossArgs {
 /// - game_session: The game session account to be finalized.
 /// - player: The player who owns the game session. This account must sign the
 ///   transaction.
-/// - vault: The vault account where the player's deposit is stored. This account
-///   must match the vault specified in the global state.
 /// - global_state: The global state account containing the game administrator's
 ///   information and the vault address.
 pub struct FinalizeLossCtx<'info> {
@@ -48,16 +46,9 @@ pub struct FinalizeLossCtx<'info> {
     )]
     pub player: Signer<'info>,
 
-    /// CHECK: This is the vault account where the player's deposit is stored.
-    #[account(
-        mut,
-    )]
-    pub vault: UncheckedAccount<'info>,
-
     #[account(
         seeds = [b"global-state"],
         bump = global_state.get_bump(),
-        has_one = vault,
     )]
     pub global_state: Account<'info, GlobalState>,
 
@@ -112,7 +103,9 @@ pub fn checks(
         &args.finalized_game_state,
         // The commitment commits to the game's public and private configuration seeds which
         // are for example used to derive the tile counts and the death tile positions, so
-        //  they are all implictly included in the commitment.    
+        // they are all implictly included in the commitment.
+        // It is also tied to the session as the session's key is derived from it, so it 
+        // cannot be reused for sessions.            
         ctx.accounts.game_session.get_commitment().as_ref(),
     ];
 

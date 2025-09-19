@@ -13,13 +13,13 @@ pub struct WithdrawCtx<'info> {
     #[account(
         seeds = [b"global-state"],
         bump = global_state.get_bump(),
-        has_one = vault,
-        has_one = admin,
     )]
     pub global_state: Account<'info, GlobalState>,
 
     #[account(
-        mut
+        mut,
+        seeds = [b"vault"],
+        bump
     )]
     /// CHECK: Vault account from which funds will be withdrawn
     pub vault: UncheckedAccount<'info>,
@@ -49,12 +49,6 @@ pub fn checks(
         crate::GameError::InvalidAdmin
     );
 
-    // Ensure the vault matches the one in global state.
-    require_keys_eq!(
-        ctx.accounts.vault.key(),
-        ctx.accounts.global_state.vault,
-        crate::GameError::InvalidVault
-    );
 
     Ok(())
 }

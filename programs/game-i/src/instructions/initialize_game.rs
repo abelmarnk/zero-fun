@@ -59,13 +59,14 @@ pub struct InitializeGameCtx<'info> {
     /// CHECK: This is the vault account where the player's deposit will be stored.
     #[account(
         mut,
+        seeds = [b"vault"],
+        bump
     )]
     pub vault: UncheckedAccount<'info>,
 
     #[account(
         seeds = [b"global-state"],
-        bump = global_state.get_bump(),
-        has_one = vault,
+        bump = global_state.get_bump()
     )]
     pub global_state: Account<'info, GlobalState>,
 
@@ -85,13 +86,6 @@ pub fn checks(
     args: &InitializeGameArgs,
     current_timestamp:i64
 )-> Result<()>{
-
-    // Verify the vault is as expected.
-    require_keys_eq!(
-        ctx.accounts.vault.key(),
-        ctx.accounts.global_state.vault,
-        GameError::InvalidVault
-    );
 
     // Verify we are not past the deadline for the signature
     require_gt!(
@@ -130,7 +124,9 @@ pub fn checks(
         INITIALIZE_GAME_ACTION.as_bytes(),
         // The commitment commits to the game's public and private configuration seeds which
         // are for example used to derive the tile counts and the death tile positions, so
-        //  they are all implictly included in the commitment.
+        // they are all implictly included in the commitment.
+        // It is also tied to the session as the session's key is derived from it, so it 
+        // cannot be reused for sessions.
         &args.commitment,
         &deposit,
         &deadline,

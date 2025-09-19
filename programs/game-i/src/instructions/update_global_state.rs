@@ -7,7 +7,6 @@ use crate::{GameError, GlobalState};
 pub enum GlobalStateUpdate {
     Admin(Pubkey),
     MessageSigner(Pubkey),
-    Vault(Pubkey),
     MaxDeposit(u8),
     MaxPayout(u8),
 }
@@ -62,9 +61,6 @@ pub fn update_global_state_handler(
         }
         GlobalStateUpdate::MessageSigner(new_signer) => {
             global_state.message_signer = new_signer;
-        }
-        GlobalStateUpdate::Vault(new_vault) => {
-            global_state.vault = new_vault;
         }
         GlobalStateUpdate::MaxDeposit(new_max_deposit) => {
             global_state.max_deposit = new_max_deposit;

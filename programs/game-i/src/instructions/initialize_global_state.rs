@@ -16,11 +16,8 @@ const BOOTSTRAP_KEY:Pubkey = pubkey!("");
 /// - max_payout: Maximum payout allowed (in bps).
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
 pub struct InitializeGlobalStateArgs {
-    pub admin: Pubkey,
-    pub message_signer: Pubkey,
-    pub vault: Pubkey,
     pub max_deposit: u8,
-    pub max_payout: u8,
+    pub max_payout: u8
 }
 
 #[derive(Accounts)]
@@ -40,8 +37,11 @@ pub struct InitializeGlobalStateCtx<'info> {
     )]
     pub initializer: Signer<'info>,
 
-    /// CHECK: The vault account where deposits are stored.
-    pub vault: UncheckedAccount<'info>,
+    /// This is added as a signer to guarantee the account is controlled by them
+    pub message_signer: Signer<'info>,
+
+    /// This is added as a signer to guarantee the account is controlled by them    
+    pub admin: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -49,8 +49,7 @@ pub struct InitializeGlobalStateCtx<'info> {
 #[inline(always)] // This function is only called once, in the handler.
 /// Perform preliminary checks, other checks may be performed later in the handler.
 pub fn checks(
-    ctx: &Context<InitializeGlobalStateCtx>,
-    args: &InitializeGlobalStateArgs
+    ctx: &Context<InitializeGlobalStateCtx>
 )->Result<()>{
     // Ensure the initializer is the bootstrap key to prevent unauthorized initialization.
     require_keys_eq!(
@@ -61,7 +60,7 @@ pub fn checks(
 
     // Ensure that the admin key is not the same as the bootstrap key.
     require_keys_neq!(
-        args.admin,
+        *ctx.accounts.admin.key,
         BOOTSTRAP_KEY,
         crate::GameError::InvalidAdmin
     );
@@ -76,14 +75,13 @@ pub fn initialize_global_state_handler(
     args: InitializeGlobalStateArgs
 ) -> Result<()> {
 
-    checks(&ctx, &args)?;
+    checks(&ctx)?;
 
     let global_state = &mut ctx.accounts.global_state;
 
     global_state.set_inner(GlobalState::new(
-        args.admin,
-        args.message_signer,
-        args.vault,
+        *ctx.accounts.admin.key,
+        *ctx.accounts.message_signer.key,
         args.max_deposit,
         args.max_payout,
         ctx.bumps.global_state,

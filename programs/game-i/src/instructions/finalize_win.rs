@@ -57,8 +57,7 @@ pub struct FinalizeWinCtx<'info> {
 
     #[account(
         seeds = [b"global-state"],
-        bump = global_state.get_bump(),
-        has_one = vault,
+        bump = global_state.get_bump()
     )]
     pub global_state: Account<'info, GlobalState>,
 
@@ -126,7 +125,9 @@ pub fn checks(
         &args.finalized_game_state,
         // The commitment commits to the game's public and private configuration seeds which
         // are for example used to derive the tile counts and the death tile positions, so
-        //  they are all implictly included in the commitment.
+        // they are all implictly included in the commitment.
+        // It is also tied to the session as the session's key is derived from it, so it 
+        // cannot be reused for sessions.
         ctx.accounts.game_session.get_commitment().as_ref(),
     ];
 
