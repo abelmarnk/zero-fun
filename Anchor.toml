@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-game_i = "5e4vTmm5pcUFHPr34rtrpu33kXC5nG4eN7JmkHhJpJsP"
+kill_fun_v0 = "5e4vTmm5pcUFHPr34rtrpu33kXC5nG4eN7JmkHhJpJsP"
 
 [registry]
 url = "https://api.apr.dev"

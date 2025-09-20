@@ -1,12 +1,12 @@
 [package]
-name = "game-i"
+name = "kill-fun-v0"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "game_i"
+name = "kill_fun_v0"
 
 [features]
 default = []
@@ -19,4 +19,10 @@ idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
 anchor-lang = "0.31.1"
+solana-sdk = "2.1.0"
+
+[dev-dependencies]
+mollusk-svm = "0.6.0"
+mollusk-svm-programs-token = "0.6.0"
+solana-sdk = "2.1.0"
 
