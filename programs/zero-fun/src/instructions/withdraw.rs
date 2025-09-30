@@ -1,7 +1,5 @@
 use anchor_lang::prelude::*;
-
-use crate::GlobalState;
-
+use crate::{GlobalState, WithdrawEvent};
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
 pub struct WithdrawArgs {
@@ -9,17 +7,13 @@ pub struct WithdrawArgs {
 }
 
 #[derive(Accounts)]
-pub struct WithdrawCtx<'info> {
-    #[account(
-        seeds = [b"global-state"],
-        bump = global_state.get_bump(),
-    )]
+pub struct WithdrawAccounts<'info> {
     pub global_state: Account<'info, GlobalState>,
 
     #[account(
         mut,
         seeds = [b"vault"],
-        bump
+        bump = global_state.get_vault_bump()
     )]
     /// CHECK: Vault account from which funds will be withdrawn
     pub vault: UncheckedAccount<'info>,
@@ -37,31 +31,34 @@ pub struct WithdrawCtx<'info> {
 }
 
 
-#[inline(always)] // This function is only called once, in the handler.
-/// Perform the preliminary checks, other checks may be perfomed later in the handler.
+#[inline(always)]
 fn checks(
-    ctx: &Context<WithdrawCtx>
+    ctx: &Context<WithdrawAccounts>
 ) -> Result<()> {
-    // Only the current admin can authorize withdrawals.
-    require_keys_eq!(
-        ctx.accounts.admin.key(),
-        ctx.accounts.global_state.admin,
+    require!(
+        ctx.accounts.global_state.is_admin(ctx.accounts.admin.key),
         crate::GameError::InvalidAdmin
     );
-
 
     Ok(())
 }
 
-/// Handler for withdrawing funds from the vault.
 pub fn withdraw_handler(
-    ctx: Context<WithdrawCtx>,
+    ctx: Context<WithdrawAccounts>,
     args: WithdrawArgs,
 ) -> Result<()> {
     checks(&ctx)?;
 
     **ctx.accounts.vault.to_account_info().try_borrow_mut_lamports()? -= args.amount;
     **ctx.accounts.recipient.to_account_info().try_borrow_mut_lamports()? += args.amount;
+
+    emit!(
+        WithdrawEvent{
+            admin:ctx.accounts.admin.key(),
+            recipient:ctx.accounts.recipient.key(),
+            amount:args.amount
+        }
+    );
 
     Ok(())
 }

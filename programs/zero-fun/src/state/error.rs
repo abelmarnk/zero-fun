@@ -3,7 +3,9 @@ use anchor_lang::prelude::*;
 #[error_code]
 pub enum GameError{
     #[msg("The game session has already been finalized.")]
-    GameAlreadyFinalized,
+    GameSessionAlreadyFinalized,
+    #[msg("The game session not won yet.")]
+    GameSessionNotWon,    
     #[msg("The provided vault does not match the expected vault.")]
     InvalidVault,
     #[msg("Expected ED25519 program")]
@@ -19,7 +21,7 @@ pub enum GameError{
     #[msg("The payout exceeds the maximum allowed payout.")]
     PayoutExceedsMaximum,
     #[msg("The game session is not active.")]
-    GameNotActive,
+    GameSessionNotActive,
     #[msg("The provided commitment does not match the expected commitment.")]
     InvalidCommitment,
     #[msg("The deadline for this action has passed.")]
@@ -32,4 +34,14 @@ pub enum GameError{
     InvalidAdmin,
     #[msg("Invalid bootstrap key")]
     InvalidBootstrapKey,
+    #[msg("The game is not currently active")]
+    GameNotActive,
+    #[msg("Max moves already reached")]
+    MaxMoveReached,
+    #[msg("Too soon to default")]
+    TooSoonToDefault,
+    #[msg("Invalid game seed")]
+    InvalidGameSeed,
+    #[msg("Invalid fail position")]
+    InvalidFailPosition
 }

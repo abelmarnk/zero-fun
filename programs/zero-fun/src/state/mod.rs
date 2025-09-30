@@ -9,3 +9,6 @@ pub use admin::*;
 
 pub mod constants;
 pub use constants::*;
+
+pub mod event;
+pub use event::*;

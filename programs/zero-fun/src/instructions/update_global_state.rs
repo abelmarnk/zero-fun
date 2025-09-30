@@ -1,17 +1,8 @@
 use anchor_lang::prelude::*;
 
-use crate::{GameError, GlobalState};
+use crate::{GameError, GameState, GlobalState, GlobalStateUpdate, UpdateGlobalStateEvent};
 
-/// Enum representing the possible updates to the global state.
-#[derive(AnchorDeserialize, AnchorSerialize, Clone)]
-pub enum GlobalStateUpdate {
-    Admin(Pubkey),
-    MessageSigner(Pubkey),
-    MaxDeposit(u8),
-    MaxPayout(u8),
-}
 
-/// Arguments for updating the global state.
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
 pub struct UpdateGlobalStateArgs {
     pub update: GlobalStateUpdate,
@@ -19,27 +10,20 @@ pub struct UpdateGlobalStateArgs {
 
 #[derive(Accounts)]
 #[instruction(args: UpdateGlobalStateArgs)]
-pub struct UpdateGlobalStateCtx<'info> {
-    #[account(
-        mut,
-        seeds = [b"global-state"],
-        bump = global_state.get_bump(),
-    )]
+pub struct UpdateGlobalStateAccounts<'info> {
     pub global_state: Account<'info, GlobalState>,
 
     /// Only the admin can update the global state.
     pub admin: Signer<'info>,
 }
 
-#[inline(always)] // This function is only called once, in the handler.
-/// Perform the preliminary checks, other checks may be perfomed later in the handler.
+#[inline(always)]
 fn checks(
-    ctx: &Context<UpdateGlobalStateCtx>,
+    ctx: &Context<UpdateGlobalStateAccounts>,
 )->Result<()>{
     // Only the current admin can update the global state.
-    require_keys_eq!(
-        ctx.accounts.admin.key(),
-        ctx.accounts.global_state.admin,
+    require!(
+        ctx.accounts.global_state.is_admin(ctx.accounts.admin.key),
         GameError::InvalidAdmin
     );
 
@@ -47,7 +31,7 @@ fn checks(
 }
 
 pub fn update_global_state_handler(
-    ctx: Context<UpdateGlobalStateCtx>,
+    ctx: Context<UpdateGlobalStateAccounts>,
     args: UpdateGlobalStateArgs,
 ) -> Result<()> {
 
@@ -67,8 +51,18 @@ pub fn update_global_state_handler(
         }
         GlobalStateUpdate::MaxPayout(new_max_payout) => {
             global_state.max_payout = new_max_payout;
+        },
+        GlobalStateUpdate::GameState(new_game_state) => {
+            global_state.game_state = new_game_state;
         }
     }
+
+    emit!(
+        UpdateGlobalStateEvent{
+            admin_at_time_of_update:ctx.accounts.admin.key(),
+            update: args.update
+        }
+    );
 
     Ok(())
 }
