@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{GameError, GameState, GlobalState, GlobalStateUpdate, UpdateGlobalStateEvent};
+use crate::{GameError, GlobalState, GlobalStateUpdate, UpdateGlobalStateEvent};
 
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
