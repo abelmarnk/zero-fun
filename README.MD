@@ -1,8 +1,8 @@
-# Zero fun — README
+# Zero fun
 
 # Overview
 
-This Anchor program is a modified replica of the [Death.fun](https://vscode.blockscan.com/2741/0x27EDd16eE56958fddCBA08947f12C43DDeC2B20C) a provably-fair single-player game. It follows the original commit–reveal fairness model while moving gameplay actions on-chain so any third party can verify a full playthrough. Low Solana fees make recording each move practical.
+This Anchor program is a modified version of the [Death.fun](https://vscode.blockscan.com/2741/0x27EDd16eE56958fddCBA08947f12C43DDeC2B20C) a provably-fair single-player game. It follows the original commit–reveal fairness model while moving gameplay actions on-chain so any third party can verify a full playthrough. Low Solana fees make recording each move practical.
 
 Primary goals and properties:
 
@@ -81,3 +81,6 @@ This program introduces several settlement flows to improve availability and ver
 * If a session is idle beyond `DEFAULT_OFFSET`, the player calls `default_game` and reclaims their original deposit from the per-session vault.
 * This protects players against permanent loss of funds if the admin never finalizes a payout.
 * The offset is added due to the possibilty of the player trying to game the admin by attempting to refund(in the case where no wait time was added) when they realize their previous action was a fail, this leaves room for the admin to mark the game as lost
+
+## Additional note
+The additions that were made to the program are only meaningful if the program has no upgrade authority that would allow for this logic to be changed
