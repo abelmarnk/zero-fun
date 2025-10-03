@@ -3,4 +3,3 @@
 - Add instruction for adding whitelisted tokens
 - Add instruction for removing whitelisted tokens
 - Split the existing instruction to work with both SOL and SPL tokens
-- Extend the close instruction for unchecked account to prevent possible re-initialization attacks
