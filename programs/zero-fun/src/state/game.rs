@@ -36,6 +36,7 @@ pub struct GameSession{
     /// Stores the next position for the player move
     pub next_player_move_position:u8,
 }
+
 impl GameSession{
     pub fn new(
         player:Pubkey,

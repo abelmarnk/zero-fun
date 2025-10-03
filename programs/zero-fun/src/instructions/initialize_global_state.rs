@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use crate::{GameState, GlobalState};
 
 
-const INITIALIZER_KEY:Pubkey = pubkey!("5e4vTmm5pcUFHPr34rtrpu33kXC5nG4eN7JmkHhJpJsP");
+const INITIALIZER_KEY:Pubkey = pubkey!("4w5ezXcjV8RdJLPAQmwVonevgUVfuAZSDMdWtURc1CRY");
 
 /// Arguments for initializing the global state.
 /// - max_deposit: Maximum deposit allowed (in bps).

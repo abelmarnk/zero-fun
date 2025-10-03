@@ -20,7 +20,9 @@ no-log-ix-name = []
 anchor-lang = "0.31.1"
 
 [dev-dependencies]
+anyhow = "1.0.100"
 litesvm = "0.6.1"
+rand = "0.9.2"
 solana-sdk = "2.1.0"
 spl-token = "8.0.0"
 

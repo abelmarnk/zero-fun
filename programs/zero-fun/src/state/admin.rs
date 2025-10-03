@@ -12,7 +12,7 @@ pub struct GlobalState {
     pub max_deposit: u8, // In bps
     pub max_payout: u8, // In bps
     pub game_state: GameState,
-    vault_bump:u8,
+    pub vault_bump:u8,
 }
 
 impl GlobalState {
