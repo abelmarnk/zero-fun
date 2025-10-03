@@ -24,7 +24,6 @@ pub struct WithdrawAccounts<'info> {
     /// CHECK: Vault recipient account to receive the withdrawn funds
     pub recipient: UncheckedAccount<'info>,
 
-    /// The admin must sign to authorize the withdrawal.
     pub admin: Signer<'info>,
 
     pub system_program: Program<'info, System>,

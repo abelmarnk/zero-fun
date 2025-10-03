@@ -1,22 +1,20 @@
 use std::path::{Path, PathBuf};
 use litesvm::LiteSVM;
 use solana_sdk::{
-        account::Account as SolanaAccount, instruction::Instruction, pubkey::Pubkey, signer::{
+        account::Account as SolanaAccount, clock::Clock, instruction::Instruction, pubkey::Pubkey, signer::{
             EncodableKey, 
             keypair::Keypair
         }
 };
 use zero_fun::{
-    GlobalState,
-    ID as ZERO_FUN_PROGRAM_ID
+    GameSession, GlobalState, ID as ZERO_FUN_PROGRAM_ID
 };
 use anchor_lang::{
     AccountSerialize,
     Space,
 };
 
-/// Inserts a GlobalState account into the SVM at the given pubkey.
-/// This function serializes the account using Anchor's serialization format.
+
 pub fn create_global_state_account(
     svm: &mut LiteSVM,
     global_state_pubkey: Pubkey,
@@ -87,4 +85,36 @@ pub fn disable_signer(instruction:&mut Instruction, key:Pubkey){
     account_meta.map(
         |account_meta| account_meta.is_signer = false
     );
+}
+
+pub fn create_game_session_account(
+    svm: &mut LiteSVM,
+    game_session_pubkey: Pubkey,
+    game_session: GameSession,
+) {
+    let mut data = Vec::with_capacity(8 + GameSession::INIT_SPACE);
+
+    // Anchor writes the discriminator + fields
+    game_session
+        .try_serialize(&mut data)
+        .expect("Could not serialize GameSession");
+
+    let rent = svm.minimum_balance_for_rent_exemption(data.len());
+
+    let account = SolanaAccount {
+        lamports: rent,
+        data,
+        owner: ZERO_FUN_PROGRAM_ID,
+        executable: false,
+        rent_epoch: 0,
+    };
+
+    svm.set_account(game_session_pubkey, account)
+        .expect("Could not insert GameSession account into SVM");
+}
+
+pub fn set_current_time(svm: &mut LiteSVM, time:i64){
+        let mut initial_clock = svm.get_sysvar::<Clock>();
+        initial_clock.unix_timestamp = time;
+        svm.set_sysvar::<Clock>(&initial_clock);
 }

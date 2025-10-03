@@ -13,7 +13,6 @@ pub struct UpdateGlobalStateArgs {
 pub struct UpdateGlobalStateAccounts<'info> {
     pub global_state: Account<'info, GlobalState>,
 
-    /// Only the admin can update the global state.
     pub admin: Signer<'info>,
 }
 

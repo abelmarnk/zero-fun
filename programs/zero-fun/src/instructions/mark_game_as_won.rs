@@ -1,13 +1,11 @@
 use anchor_lang::prelude::*;
 
-use crate::{GameError, GameSession, GameSessionStatus, GlobalState, MarkGameAsWonEvent};
+use crate::{GameError, GameSession, GameSessionStatus, MarkGameAsWonEvent};
 
 
 #[derive(Accounts)]
 pub struct MarkGameAsWonAccounts<'info>{
     player:Signer<'info>,
-
-    global_state:Account<'info, GlobalState>,
 
     game_session:Account<'info, GameSession>,
 }

@@ -52,6 +52,10 @@ impl TestSetup {
     fn builder(svm: &mut LiteSVM, state_admin: Keypair, instruction_admin: Keypair) 
         -> Result<([Instruction; 1], Vec<Keypair>)> {
 
+        // Create the admin account
+        svm.airdrop(&state_admin.pubkey(), 1_000_000_000).unwrap();
+
+        // Create the global state account
         let (global_state_key, _) =
             Pubkey::find_program_address(
                 &[b"global-state"], &Self::ZERO_FUN_PROGRAM_ID
@@ -68,6 +72,7 @@ impl TestSetup {
 
         create_global_state_account(svm, global_state_key, global_state);
 
+        // Build the instruction
         let accounts = vec![
             AccountMeta::new(global_state_key, false),
             AccountMeta::new_readonly(instruction_admin.pubkey(), true),
@@ -77,13 +82,13 @@ impl TestSetup {
             update: GlobalStateUpdate::MaxDeposit(50),
         };
 
-        let ix = Instruction {
+        let update_state = Instruction {
             program_id: Self::ZERO_FUN_PROGRAM_ID,
             accounts,
             data: UpdateGlobalState { args }.data(),
         };
 
-        Ok(([ix], vec![instruction_admin]))
+        Ok(([update_state], vec![instruction_admin]))
     }
 }
 
@@ -105,8 +110,6 @@ fn test_update_global_state_success() {
 
     let payer = signers[0].pubkey();
     
-    svm.airdrop(&payer, 1_000_000_000).expect("Could not airdrop to payer");
-
     let transaction = Transaction::new_signed_with_payer(
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
@@ -138,14 +141,10 @@ fn test_update_global_state_fails_with_invalid_admin() {
         Err(error) => panic!("Failed to create instruction: {}", error),
     };
 
-    let signers: Vec<&Keypair> = signers.iter().collect();
-
     let recent_blockhash = svm.latest_blockhash();
 
     let payer = signers[0].pubkey();
     
-    svm.airdrop(&payer, 1_000_000_000).expect("Could not airdrop to payer");
-
     let transaction = Transaction::new_signed_with_payer(
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
@@ -188,8 +187,6 @@ fn test_update_global_state_fails_when_admin_does_not_sign() {
     
     signers[0] = payer;
     
-    svm.airdrop(&payer_key, 1_000_000_000).expect("Could not airdrop to payer");
-
     let transaction = Transaction::new_signed_with_payer(
         &instructions, Some(&payer_key), &signers, recent_blockhash,
     );

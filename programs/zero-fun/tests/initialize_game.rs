@@ -40,27 +40,37 @@ impl TestSetup {
         game_state: GameState,
     ) -> Result<([Instruction; 1], Vec<Keypair>)> {
 
+        // Create the player account
         let player = Keypair::new();
         svm.airdrop(&player.pubkey(), 1_000_000_000).expect("Could not airdrop to player");
 
-        let public_config_seed = [0u8; HASH_LENGTH];
-
-        let (game_session_pda, _) = Pubkey::find_program_address(
+        // Create the PDAs
+        let (game_session, _) = Pubkey::find_program_address(
             &[
                 b"game-session",
-                public_config_seed.as_ref(),
+                [0u8; HASH_LENGTH].as_ref(),
                 player.pubkey().as_ref(),
             ],
             &Self::ZERO_FUN_PROGRAM_ID,
         );
 
-        let (global_state_pda, _) =
+        let (global_state, _) =
             Pubkey::find_program_address(&[b"global-state"], &Self::ZERO_FUN_PROGRAM_ID);
 
-        let (vault_pda, vault_bump) =
+        let (vault, vault_bump) =
             Pubkey::find_program_address(&[b"vault"], &Self::ZERO_FUN_PROGRAM_ID);
 
-        let global_state = GlobalState {
+        let (user_vault, _) = Pubkey::find_program_address(
+            &[
+                b"vault",
+                [0u8; HASH_LENGTH].as_ref(),
+                player.pubkey().as_ref(),
+            ],
+            &Self::ZERO_FUN_PROGRAM_ID,
+        );        
+
+        // Create the global state account
+        let global_state_account = GlobalState {
             admin: Pubkey::default(),
             message_signer: Pubkey::default(),
             max_deposit: max_deposit_bps,
@@ -69,41 +79,34 @@ impl TestSetup {
             vault_bump: vault_bump as u8,
         };
 
-        create_global_state_account(svm, global_state_pda, global_state);
+        create_global_state_account(svm, global_state, global_state_account);
 
-        create_vault_account(svm, vault_pda, vault_balance);
+        // Create the vault account
+        create_vault_account(svm, vault, vault_balance);
 
-        let (user_vault_pda, _user_vault_bump) = Pubkey::find_program_address(
-            &[
-                b"vault",
-                public_config_seed.as_ref(),
-                player.pubkey().as_ref(),
-            ],
-            &Self::ZERO_FUN_PROGRAM_ID,
-        );
-
+        // Build the instruction
         let accounts: Vec<AccountMeta> = vec![
-            AccountMeta::new(game_session_pda, false),
+            AccountMeta::new(game_session, false),
             AccountMeta::new(player.pubkey(), true),
-            AccountMeta::new(user_vault_pda, false),
-            AccountMeta::new_readonly(vault_pda, false),
-            AccountMeta::new_readonly(global_state_pda, false),
+            AccountMeta::new(user_vault, false),
+            AccountMeta::new_readonly(vault, false),
+            AccountMeta::new_readonly(global_state, false),
             AccountMeta::new_readonly(Self::SYSTEM_PROGRAM_ID, false),
         ];
 
         let args = InitializeGameArgs {
-            public_config_seed,
+            public_config_seed:[0u8; HASH_LENGTH],
             game_metadata: metadata,
             deposit,
         };
 
-        let initialize_game_ix = Instruction {
+        let initialize_game = Instruction {
             program_id: Self::ZERO_FUN_PROGRAM_ID,
             accounts,
             data: InitializeGame { args }.data(),
         };
 
-        Ok(([initialize_game_ix], vec![player]))
+        Ok(([initialize_game], vec![player]))
     }
 
     pub fn with_default(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
@@ -117,7 +120,7 @@ impl TestSetup {
     }
 
     pub fn with_metadata_too_long(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
-        let metadata = "0".repeat(MAX_METADATA_LENGTH + 1);
+        let metadata = "0".repeat(MAX_METADATA_LENGTH + 1); // Metadata exceeds max by 1
         let deposit = 10_000u64;
         let vault_balance = 1_000_000_000u64;
         let max_deposit_bps = 10u8;
@@ -141,7 +144,7 @@ impl TestSetup {
         let deposit = 10_000u64;
         let vault_balance = 1_000_000_000u64;
         let max_deposit_bps = 10u8;
-        let game_state = GameState::Locked;
+        let game_state = GameState::Locked; // Games can only be created when the game is active
 
         Self::builder(svm, metadata, deposit, vault_balance, max_deposit_bps, game_state)
     }

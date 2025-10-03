@@ -59,15 +59,17 @@ impl TestSetup {
 
         let admin = Keypair::new();
 
-        // Create the initializer account if it doesn't exist
+        // Create the initializer account
         svm.airdrop(&initializer.pubkey(), 1_000_000_000).unwrap();
 
+        // Create the PDAs
         let (global_state_pda, _global_bump) = Pubkey::find_program_address(
                 &[b"global-state"], &Self::ZERO_FUN_PROGRAM_ID);
 
         let (vault_pda, _vault_bump) = Pubkey::find_program_address(
             &[b"vault"], &Self::ZERO_FUN_PROGRAM_ID);
 
+        // Build the instruction
         let accounts: Vec<AccountMeta> = vec![
             AccountMeta::new(global_state_pda, false),
             AccountMeta::new_readonly(initializer.pubkey(), true),
@@ -83,13 +85,13 @@ impl TestSetup {
             initial_state: GameState::Active
         };
 
-        let initialize_ix = Instruction {
+        let initialize = Instruction {
             program_id: Self::ZERO_FUN_PROGRAM_ID,
             accounts: accounts,
             data: InitializeGlobalState { args }.data(),
         };
 
-        Ok(([initialize_ix], vec![initializer, message_signer, admin]))
+        Ok(([initialize], vec![initializer, message_signer, admin]))
     }
 
 }

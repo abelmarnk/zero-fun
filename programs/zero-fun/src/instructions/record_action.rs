@@ -45,7 +45,7 @@ pub fn record_action_handler(ctx:Context<RecordActionAccounts>, args:RecordActio
     let now = Clock::get()?.unix_timestamp;
     ctx.accounts.game_session.last_action_time = now;
 
-    // Record the players move
+    // Record the player's move
     ctx.accounts.game_session.set_next_player_move(args.action)?;
 
     Ok(())
