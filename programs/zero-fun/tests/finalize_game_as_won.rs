@@ -28,9 +28,7 @@ use zero_fun::{
     GameState,
     FINALIZE_WIN_ACTION,
     HASH_LENGTH,
-    MAX_BPS,
     ID as ZERO_FUN_PROGRAM_ID,
-    PUBLIC_SEED,
     MAX_MOVE_COUNT,
 };
 
