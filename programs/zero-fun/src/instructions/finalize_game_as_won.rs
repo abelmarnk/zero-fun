@@ -15,8 +15,7 @@ use crate::{
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
 pub struct FinalizeGameAsWonArgs {
     pub payout:u64,
-    pub deadline:i64,
-    pub private_config_seed:[u8;HASH_LENGTH]
+    pub deadline:i64
 }
 
 #[derive(Accounts)]

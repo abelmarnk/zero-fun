@@ -77,7 +77,7 @@ impl TestSetup {
             next_player_move_position: 0u8,
         };
 
-        create_game_session_account(svm, game_session_pubkey, game_session_account);
+        create_game_session_account(svm, game_session_pubkey, &game_session_account);
 
         // Build the instruction
         let accounts: Vec<AccountMeta> = vec![

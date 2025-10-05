@@ -26,7 +26,7 @@ pub struct FinalizeGameAsWonForPlayerAccounts<'info> {
     #[account(
         mut
     )]
-    pub player: Signer<'info>,
+    pub player: SystemAccount<'info>,
 
     /// CHECK: This is the vault account where the player's deposit is stored.
     #[account(
@@ -44,15 +44,7 @@ pub struct FinalizeGameAsWonForPlayerAccounts<'info> {
 
     pub global_state: Account<'info, GlobalState>,
 
-    pub admin:Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    /// CHECK: This is the instruction sysvar account    
-    #[account(
-        address = INSTRUCTIONS_SYSVAR_ADDRESS
-    )]
-    pub instructions_sysvar: UncheckedAccount<'info>
+    pub admin:Signer<'info>
 }
 
 #[inline(always)]

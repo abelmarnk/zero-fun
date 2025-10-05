@@ -37,11 +37,15 @@ pub fn is_signature_valid(instruction_sysvar:&AccountInfo, message:&[&[u8]],
             GameError::InvalidED25519Program
         );
 
+        msg!("Data for ED25519 program: {:?}", ed25519_instruction.data);
+
         require_eq!(
             ed25519_instruction.accounts.len(),
             0,
             GameError::InvalidAccountCountForED25519Program
         );
+
+        msg!("-1");
 
         if ed25519_instruction.data.len().le(&14)
             || *ed25519_instruction.data.get(0).unwrap() != 1
@@ -50,11 +54,17 @@ pub fn is_signature_valid(instruction_sysvar:&AccountInfo, message:&[&[u8]],
             return Err(GameError::InvalidDataForED25519Program.into());
         }
 
-        let mut data = ed25519_instruction.data.get(2..14)
+        msg!("-2");
+
+        let mut data = ed25519_instruction.data.get(2..16)
             .ok_or(GameError::InvalidDataForED25519Program)?;
+
+        msg!("-3");
 
         let offsets = Ed25519SignatureOffsets::deserialize(&mut data)
             .map_err(|_| GameError::InvalidDataForED25519Program)?;
+
+        msg!("-4");
 
         let pubkey_offset = usize::from(offsets.public_key_offset);
         let pubkey_end = pubkey_offset + core::mem::size_of::<Pubkey>();
@@ -63,15 +73,21 @@ pub fn is_signature_valid(instruction_sysvar:&AccountInfo, message:&[&[u8]],
             .get(pubkey_offset..pubkey_end)
             .ok_or(GameError::InvalidDataForED25519Program)?;
 
+        msg!("-5");
+
         if *message_signer.as_array() != *pubkey_bytes {
             return Err(GameError::InvalidMessageSigner.into());
         }
+
+        msg!("-6");        
 
         require_eq!(
             usize::from(offsets.message_data_size),
             core::mem::size_of::<Hash>(),
             GameError::InvalidCommitment
         );
+
+        msg!("-7");        
 
         let msg_offset = usize::from(offsets.message_data_offset);
         let msg_end = msg_offset + core::mem::size_of::<Hash>();
@@ -80,10 +96,13 @@ pub fn is_signature_valid(instruction_sysvar:&AccountInfo, message:&[&[u8]],
             .get(msg_offset..msg_end)
             .ok_or(GameError::InvalidDataForED25519Program)?;
 
+        msg!("-8");
+
         if *message_hash.as_ref() != *msg_bytes {
             return Err(GameError::InvalidCommitment.into());
         }
 
+        msg!("-9");
 
         Ok(())
 }

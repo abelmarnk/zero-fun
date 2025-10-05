@@ -12,6 +12,7 @@ use common::utils::{
     add_zero_fun_program,
     create_game_session_account,
     create_vault_account,
+    set_current_time
 };
 
 use zero_fun::{
@@ -22,8 +23,6 @@ use zero_fun::{
     HASH_LENGTH,
     ID as ZERO_FUN_PROGRAM_ID,
 };
-
-use crate::common::set_current_time;
 
 struct TestSetup {}
 
@@ -66,7 +65,7 @@ impl TestSetup {
             next_player_move_position: 0u8,
         };
 
-        create_game_session_account(svm, game_session, game_session_account);
+        create_game_session_account(svm, game_session, &game_session_account);
 
         // Set the vault state
         let deposit_amount = 1_000_000u64;
@@ -125,7 +124,7 @@ impl TestSetup {
 
         let current_time = 123456789i64;
 
-        let last_action_time = (current_time - DEFAULT_OFFSET) + 10;
+        let last_action_time = (current_time - DEFAULT_OFFSET) - 10;
 
         Self::builder(
             svm,
@@ -146,7 +145,7 @@ impl TestSetup {
 
         let current_time = 123456789i64;
 
-        let last_action_time = (current_time - DEFAULT_OFFSET) + 10;
+        let last_action_time = (current_time - DEFAULT_OFFSET) - 10;
 
         Self::builder(
             svm,

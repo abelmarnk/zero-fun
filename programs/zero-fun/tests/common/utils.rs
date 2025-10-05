@@ -1,9 +1,8 @@
 use std::path::{Path, PathBuf};
 use litesvm::LiteSVM;
 use solana_sdk::{
-        account::Account as SolanaAccount, clock::Clock, instruction::Instruction, pubkey::Pubkey, signer::{
-            EncodableKey, 
-            keypair::Keypair
+        account::Account as SolanaAccount, clock::Clock, ed25519_instruction::new_ed25519_instruction_with_signature, hash::hashv, instruction::Instruction, pubkey::Pubkey, signer::{
+            EncodableKey, Signer, keypair::Keypair
         }
 };
 use zero_fun::{
@@ -79,7 +78,7 @@ pub fn disable_signer(instruction:&mut Instruction, key:Pubkey){
     );
 
     if account_meta.is_none(){
-        panic!("Account meta is none")
+        panic!("Account not in instruction")
     }
 
     account_meta.map(
@@ -90,7 +89,7 @@ pub fn disable_signer(instruction:&mut Instruction, key:Pubkey){
 pub fn create_game_session_account(
     svm: &mut LiteSVM,
     game_session_pubkey: Pubkey,
-    game_session: GameSession,
+    game_session: &GameSession,
 ) {
     let mut data = Vec::with_capacity(8 + GameSession::INIT_SPACE);
 
@@ -117,4 +116,17 @@ pub fn set_current_time(svm: &mut LiteSVM, time:i64){
         let mut initial_clock = svm.get_sysvar::<Clock>();
         initial_clock.unix_timestamp = time;
         svm.set_sysvar::<Clock>(&initial_clock);
+}
+
+pub fn ed25519_instruction_for_parts(
+    signer: &Keypair,
+    parts: &[&[u8]],
+) -> Instruction {
+    let message_hash = hashv(parts).to_bytes();
+
+    let sig_bytes = signer.sign_message(&message_hash).into();
+
+    let pubkey_bytes: [u8; 32] = signer.pubkey().to_bytes();
+
+    new_ed25519_instruction_with_signature(&message_hash, &sig_bytes, &pubkey_bytes)
 }

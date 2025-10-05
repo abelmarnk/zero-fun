@@ -28,7 +28,7 @@ pub struct FinalizeGameAsLostAccounts<'info> {
     #[account(
         mut
     )]
-    pub player: Signer<'info>,
+    pub player: SystemAccount<'info>,
 
     /// CHECK: This is the vault account where the player's deposit is stored.
     #[account(
@@ -86,7 +86,7 @@ fn checks(
         ]).to_bytes();
 
     let move_type_count_for_round = (public_config_seed_for_move[0] % 
-        u8::try_from(MAX_MOVE_TYPE_COUNT).unwrap() - 1) + 2;
+        (u8::try_from(MAX_MOVE_TYPE_COUNT).unwrap() - 1)) + 2;
 
     // Get the move for failure
     let private_config_seed_for_move:[u8;HASH_LENGTH] = hashv(&[
