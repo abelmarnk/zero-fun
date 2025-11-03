@@ -65,8 +65,6 @@ pub fn create_vault_account(svm: &mut LiteSVM, vault_pubkey: Pubkey, lamports: u
 }
 
 pub fn add_zero_fun_program(litesvm:&mut LiteSVM){
-    let mut binary_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-
     let binary_path = include_bytes!("../../../../target/deploy/zero_fun.so");
 
     litesvm.add_program(ZERO_FUN_PROGRAM_ID, binary_path);
