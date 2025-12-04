@@ -1,6 +1,0 @@
-- Add tests for the program
-- Add Server/Client for the Game
-- Add instruction for adding whitelisted tokens
-- Add instruction for removing whitelisted tokens
-- Split the existing instruction to work with both SOL and SPL tokens
-- Add assertions to tests
