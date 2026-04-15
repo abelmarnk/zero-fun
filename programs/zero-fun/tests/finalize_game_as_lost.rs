@@ -11,6 +11,8 @@ use solana_sdk::{
 
 mod common;
 use common::utils::{
+    assert_custom_transaction_error,
+    assert_transaction_success,
     add_zero_fun_program,
     create_game_session_account,
     create_vault_account,
@@ -294,17 +296,7 @@ fn test_finalize_game_as_lost_success() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            panic!("Expected success but transaction failed");
-        }
-    }
+    assert_transaction_success(svm.send_transaction(transaction));
 }
 
 #[test]
@@ -329,18 +321,10 @@ fn test_finalize_game_as_lost_fails_with_invalid_player() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid player");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::InvalidPlayer,
+    );
 }
 
 #[test]
@@ -365,18 +349,10 @@ fn test_finalize_game_as_lost_fails_with_invalid_vault() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid vault");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::InvalidVault,
+    );
 }
 
 #[test]
@@ -401,18 +377,10 @@ fn test_finalize_game_as_lost_fails_with_invalid_public_config() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid game seed (public config mismatch)");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::InvalidGameSeed,
+    );
 }
 
 #[test]
@@ -437,16 +405,8 @@ fn test_finalize_game_as_lost_fails_with_invalid_fail_position() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid fail position / move mismatch");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::InvalidFailPosition,
+    );
 }

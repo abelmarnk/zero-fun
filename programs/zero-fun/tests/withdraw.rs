@@ -12,6 +12,8 @@ use solana_sdk::{
 mod common;
 
 use common::utils::{
+    assert_custom_transaction_error,
+    assert_transaction_success,
     add_zero_fun_program,
     create_global_state_account,
     create_vault_account,
@@ -120,17 +122,7 @@ fn test_withdraw_success() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            panic!("Expected success but transaction failed");
-        }
-    }
+    assert_transaction_success(svm.send_transaction(transaction));
 }
 
 #[test]
@@ -154,16 +146,8 @@ fn test_withdraw_fails_with_invalid_admin() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid admin");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::InvalidAdmin,
+    );
 }

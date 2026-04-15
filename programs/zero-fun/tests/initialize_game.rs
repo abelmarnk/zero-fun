@@ -11,6 +11,8 @@ use solana_sdk::{
 
 mod common;
 use common::utils::{
+    assert_custom_transaction_error,
+    assert_transaction_success,
     add_zero_fun_program,
     create_global_state_account,
     create_vault_account,
@@ -173,17 +175,7 @@ fn test_initialize_game_success() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            panic!("Expected success but transaction failed");
-        }
-    }
+    assert_transaction_success(svm.send_transaction(transaction));
 }
 
 #[test]
@@ -208,18 +200,10 @@ fn test_initialize_game_fails_when_metadata_too_long() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - Metadata too long");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::MetadataTooLong,
+    );
 }
 
 #[test]
@@ -244,18 +228,10 @@ fn test_initialize_game_fails_when_deposit_exceeds_max() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - Deposit exceeds maximum");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::DepositExceedsMaximum,
+    );
 }
 
 #[test]
@@ -280,16 +256,8 @@ fn test_initialize_game_fails_when_game_not_active() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - Game not active");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::GameNotActive,
+    );
 }

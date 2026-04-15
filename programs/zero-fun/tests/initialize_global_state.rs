@@ -11,6 +11,9 @@ use solana_sdk::{
 
 mod common;
 use common::utils::{
+    assert_custom_transaction_error,
+    assert_transaction_error,
+    assert_transaction_success,
     add_zero_fun_program,
     get_initializer_keypair
 };
@@ -23,6 +26,10 @@ use zero_fun::{
 };
 
 use crate::common::disable_signer;
+use solana_sdk::{
+    instruction::InstructionError,
+    transaction::TransactionError,
+};
 
 // Again the idea is that relevant things are tested, stuff that has no relevance 
 // to the test are filled with defaults, here what is important is that the global state
@@ -121,18 +128,7 @@ fn test_initialize_global_state_success() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-
-            panic!("Expected success but transaction failed");
-        }
-    }
+    assert_transaction_success(svm.send_transaction(transaction));
 }
 
 #[test]
@@ -157,20 +153,10 @@ fn test_initialize_global_state_fails_with_invalid_initializer() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-
-            panic!("This transaction should have failed - The initializer is not valid")
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::InvalidBootstrapKey,
+    );
 }
 
 #[test]
@@ -190,49 +176,27 @@ fn test_initialize_global_state_fails_when_accounts_already_exist() {
 
     let payer = signers[0].pubkey();
 
-    let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
-
     // Run the first transaction
-    let result = svm.send_transaction(transaction);    
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-
-            panic!("Expected success but transaction failed");
-        }
-    }
-
     let recent_blockhash = svm.latest_blockhash();
-    
     let transaction = Transaction::new_signed_with_payer(
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
+    assert_transaction_success(svm.send_transaction(transaction));
 
     svm.expire_blockhash();
 
     // Run it again
+    let recent_blockhash = svm.latest_blockhash();
+    let transaction = Transaction::new_signed_with_payer(
+        &instructions, Some(&payer), &signers, recent_blockhash,
+    );
+
     let result = svm.send_transaction(transaction);    
 
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-
-            panic!("This transaction should have failed - The global state accounts already exists")
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_transaction_error(
+        result,
+        TransactionError::InstructionError(0, InstructionError::Custom(0)),
+    );
 
 }
 
@@ -268,18 +232,8 @@ fn test_initialize_global_state_fails_when_initializer_does_not_sign() {
         &instructions, Some(&payer_key), &signers[1..], recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-
-            panic!("This transaction should have failed - The initializer did not sign")
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_transaction_error(
+        svm.send_transaction(transaction),
+        TransactionError::SignatureFailure,
+    );
 }

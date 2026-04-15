@@ -2,13 +2,16 @@ use anchor_lang::InstructionData;
 use litesvm::LiteSVM;
 use anyhow::Result;
 use solana_sdk::{
-    instruction::{AccountMeta, Instruction}, 
-    pubkey::Pubkey, signer::{Signer, keypair::Keypair}, 
-    transaction::Transaction
+    instruction::{AccountMeta, Instruction},
+    pubkey::Pubkey,
+    signer::{Signer, keypair::Keypair},
+    transaction::Transaction,
 };
 
 mod common;
 use common::utils::{
+    assert_custom_transaction_error,
+    assert_transaction_success,
     add_zero_fun_program,
     create_game_session_account,
 };
@@ -32,12 +35,9 @@ impl TestSetup {
         instruction_player: Keypair,
         status: GameSessionStatus,
     ) -> Result<([Instruction; 1], Vec<Keypair>)> {
-
-        // Create the player account
         svm.airdrop(&instruction_player.pubkey(), 1_000_000_000)
             .expect("Could not airdrop to player");
 
-        // Set the game session state
         let (game_session, _) = Pubkey::find_program_address(
             &[
                 b"game-session",
@@ -61,10 +61,9 @@ impl TestSetup {
 
         create_game_session_account(svm, game_session, &game_session_account);
 
-        // Build the instruction
         let accounts: Vec<AccountMeta> = vec![
             AccountMeta::new(instruction_player.pubkey(), true),
-            AccountMeta::new(game_session, false), 
+            AccountMeta::new(game_session, false),
         ];
 
         let instruction = Instruction {
@@ -80,32 +79,23 @@ impl TestSetup {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
 
-        // Status must be Active for success
-        let status = GameSessionStatus::Active;
-
-        Self::builder(svm, state_player, instruction_player, status)
+        Self::builder(svm, state_player, instruction_player, GameSessionStatus::Active)
     }
 
     pub fn with_invalid_player(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let state_player = Pubkey::new_unique();
-        let instruction_player = Keypair::new(); // Not the owner of the game session
+        let instruction_player = Keypair::new();
 
-        let status = GameSessionStatus::Active;
-
-        Self::builder(svm, state_player, instruction_player, status)
+        Self::builder(svm, state_player, instruction_player, GameSessionStatus::Active)
     }
 
     pub fn with_inactive_game(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
 
-        // Game is not active, should fail
-        let status = GameSessionStatus::Lost;
-
-        Self::builder(svm, state_player, instruction_player, status)
+        Self::builder(svm, state_player, instruction_player, GameSessionStatus::Lost)
     }
 }
-
 
 #[test]
 fn test_mark_game_as_won_success() {
@@ -117,7 +107,6 @@ fn test_mark_game_as_won_success() {
 
     let (instructions, signers) = match result {
         Ok(result) => result,
-
         Err(error) => panic!("Failed to create instruction: {}", error),
     };
 
@@ -126,20 +115,13 @@ fn test_mark_game_as_won_success() {
     let recent_blockhash = svm.latest_blockhash();
 
     let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash
+        &instructions,
+        Some(&payer),
+        &signers,
+        recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            panic!("Expected success but transaction failed");
-        }
-    }
+    assert_transaction_success(svm.send_transaction(transaction));
 }
 
 #[test]
@@ -152,7 +134,6 @@ fn test_mark_game_as_won_fails_with_invalid_player() {
 
     let (instructions, signers) = match result {
         Ok(result) => result,
-
         Err(error) => panic!("Failed to create instruction: {}", error),
     };
 
@@ -160,20 +141,17 @@ fn test_mark_game_as_won_fails_with_invalid_player() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+    let transaction = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&payer),
+        &signers,
+        recent_blockhash,
+    );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid player");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::InvalidPlayer,
+    );
 }
 
 #[test]
@@ -193,18 +171,15 @@ fn test_mark_game_as_won_fails_with_inactive_game() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+    let transaction = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&payer),
+        &signers,
+        recent_blockhash,
+    );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - Game not active");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::GameSessionNotActive,
+    );
 }

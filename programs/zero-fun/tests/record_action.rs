@@ -9,6 +9,8 @@ use solana_sdk::{
 
 mod common;
 use common::utils::{
+    assert_custom_transaction_error,
+    assert_transaction_success,
     add_zero_fun_program,
     create_game_session_account,
     create_global_state_account,
@@ -37,25 +39,20 @@ impl TestSetup {
         global_state_status: GameState,
         game_session_status: GameSessionStatus,
     ) -> Result<([Instruction; 1], Vec<Keypair>)> {
-
-        // Create the player account
         svm.airdrop(&instruction_player.pubkey(), 1_000_000_000)
             .expect("Could not airdrop to player");
 
-        // Create the Global State
         let global_state_pubkey = Pubkey::new_unique();
         let global_state = GlobalState::new(
-            Pubkey::new_unique(),             
-            Pubkey::new_unique(),    
-            10,                         
-            100,                          
-            global_state_status,         
-            255,                         
+            Pubkey::new_unique(),
+            Pubkey::new_unique(),
+            10,
+            100,
+            global_state_status,
+            255,
         );
-
         create_global_state_account(svm, global_state_pubkey, global_state);
 
-        // Create the Game Session
         let (game_session_pubkey, _) = Pubkey::find_program_address(
             &[
                 b"game-session",
@@ -79,7 +76,6 @@ impl TestSetup {
 
         create_game_session_account(svm, game_session_pubkey, &game_session_account);
 
-        // Build the instruction
         let accounts: Vec<AccountMeta> = vec![
             AccountMeta::new(instruction_player.pubkey(), true),
             AccountMeta::new(global_state_pubkey, false),
@@ -90,8 +86,9 @@ impl TestSetup {
             program_id: Self::ZERO_FUN_PROGRAM_ID,
             accounts,
             data: RecordAction {
-                args: RecordActionArgs { action: 42 },
-            }.data(),
+                args: RecordActionArgs { action: 1 },
+            }
+            .data(),
         };
 
         Ok(([instruction], vec![instruction_player]))
@@ -112,7 +109,7 @@ impl TestSetup {
 
     pub fn with_invalid_player(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let state_player = Pubkey::new_unique();
-        let instruction_player = Keypair::new(); // Unrecognized player
+        let instruction_player = Keypair::new();
 
         Self::builder(
             svm,
@@ -132,7 +129,7 @@ impl TestSetup {
             state_player,
             instruction_player,
             GameState::Active,
-            GameSessionStatus::Lost, // not active
+            GameSessionStatus::Lost,
         )
     }
 
@@ -144,12 +141,11 @@ impl TestSetup {
             svm,
             state_player,
             instruction_player,
-            GameState::Locked, // not active
+            GameState::Locked,
             GameSessionStatus::Active,
         )
     }
 }
-
 
 #[test]
 fn test_record_action_success() {
@@ -169,20 +165,13 @@ fn test_record_action_success() {
     let recent_blockhash = svm.latest_blockhash();
 
     let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash
+        &instructions,
+        Some(&payer),
+        &signers,
+        recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            panic!("Expected success but transaction failed");
-        }
-    }
+    assert_transaction_success(svm.send_transaction(transaction));
 }
 
 #[test]
@@ -202,20 +191,17 @@ fn test_record_action_fails_with_invalid_player() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+    let transaction = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&payer),
+        &signers,
+        recent_blockhash,
+    );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid player");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::InvalidPlayer,
+    );
 }
 
 #[test]
@@ -235,20 +221,17 @@ fn test_record_action_fails_with_inactive_game_session() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+    let transaction = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&payer),
+        &signers,
+        recent_blockhash,
+    );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - Inactive game session");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::GameSessionNotActive,
+    );
 }
 
 #[test]
@@ -268,18 +251,15 @@ fn test_record_action_fails_with_inactive_global_state() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+    let transaction = Transaction::new_signed_with_payer(
+        &instructions,
+        Some(&payer),
+        &signers,
+        recent_blockhash,
+    );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - Inactive global state");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::GameNotActive,
+    );
 }

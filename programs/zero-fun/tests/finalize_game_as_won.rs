@@ -11,6 +11,8 @@ use solana_sdk::{
 
 mod common;
 use common::utils::{
+    assert_custom_transaction_error_at,
+    assert_transaction_success,
     add_zero_fun_program,
     create_game_session_account,
     create_vault_account,
@@ -409,17 +411,7 @@ fn test_finalize_game_as_won_success() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-        }
-        Err(err) => {
-            println!("Program failed: {:?}", err);
-            panic!("Expected success but transaction failed");
-        }
-    }
+    assert_transaction_success(svm.send_transaction(transaction));
 }
 
 #[test]
@@ -444,18 +436,11 @@ fn test_finalize_game_as_won_fails_with_invalid_player() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid player");
-        }
-        Err(err) => {
-            println!("Program failed: {:?}", err);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error_at(
+        svm.send_transaction(transaction),
+        1,
+        zero_fun::GameError::InvalidPlayer,
+    );
 }
 
 #[test]
@@ -480,18 +465,11 @@ fn test_finalize_game_as_won_fails_with_invalid_vault() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid vault");
-        }
-        Err(err) => {
-            println!("Program failed: {:?}", err);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error_at(
+        svm.send_transaction(transaction),
+        1,
+        zero_fun::GameError::InvalidVault,
+    );
 }
 
 #[test]
@@ -516,18 +494,11 @@ fn test_finalize_game_as_won_fails_with_mismatched_signed_payout() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Mismatched signed payout");
-        }
-        Err(err) => {
-            println!("Program failed: {:?}", err);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error_at(
+        svm.send_transaction(transaction),
+        1,
+        zero_fun::GameError::InvalidCommitment,
+    );
 }
 
 #[test]
@@ -552,18 +523,11 @@ fn test_finalize_game_as_won_fails_with_mismatched_signed_deadline() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Mismatched signed deadline");
-        }
-        Err(err) => {
-            println!("Program failed: {:?}", err);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error_at(
+        svm.send_transaction(transaction),
+        1,
+        zero_fun::GameError::InvalidCommitment,
+    );
 }
 
 #[test]
@@ -588,18 +552,11 @@ fn test_finalize_game_as_won_fails_with_invalid_public_config() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid public config");
-        }
-        Err(err) => {
-            println!("Program failed: {:?}", err);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error_at(
+        svm.send_transaction(transaction),
+        1,
+        zero_fun::GameError::InvalidCommitment,
+    );
 }
 
 #[test]
@@ -624,18 +581,11 @@ fn test_finalize_game_as_won_fails_when_deadline_passed() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Deadline passed");
-        }
-        Err(err) => {
-            println!("Program failed: {:?}", err);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error_at(
+        svm.send_transaction(transaction),
+        1,
+        zero_fun::GameError::DeadlinePassed,
+    );
 }
 
 #[test]
@@ -660,16 +610,9 @@ fn test_finalize_game_as_won_fails_when_payout_exceeds_max() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(res) => {
-            println!("Program succeeded (compute units: {:?})", res.compute_units_consumed);
-            panic!("This transaction should have failed - Payout exceeds maximum");
-        }
-        Err(err) => {
-            println!("Program failed: {:?}", err);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error_at(
+        svm.send_transaction(transaction),
+        1,
+        zero_fun::GameError::PayoutExceedsMaximum,
+    );
 }

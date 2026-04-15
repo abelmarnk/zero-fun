@@ -11,6 +11,9 @@ use solana_sdk::{
 mod common;
 
 use common::utils::{
+    assert_custom_transaction_error,
+    assert_transaction_error,
+    assert_transaction_success,
     add_zero_fun_program,
     create_global_state_account,
 };
@@ -23,6 +26,8 @@ use zero_fun::{
     GlobalState,
     ID as ZERO_FUN_PROGRAM_ID,
 };
+
+use solana_sdk::transaction::TransactionError;
 
 use crate::common::disable_signer;
 
@@ -114,17 +119,7 @@ fn test_update_global_state_success() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            panic!("Expected success but transaction failed");
-        }
-    }
+    assert_transaction_success(svm.send_transaction(transaction));
 }
 
 #[test]
@@ -149,18 +144,10 @@ fn test_update_global_state_fails_with_invalid_admin() {
         &instructions, Some(&payer), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - Invalid admin");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_custom_transaction_error(
+        svm.send_transaction(transaction),
+        zero_fun::GameError::InvalidAdmin,
+    );
 }
 
 #[test]
@@ -191,16 +178,8 @@ fn test_update_global_state_fails_when_admin_does_not_sign() {
         &instructions, Some(&payer_key), &signers, recent_blockhash,
     );
 
-    let result = svm.send_transaction(transaction);
-
-    match result {
-        Ok(result) => {
-            println!("Program succeeded (compute units: {:?})", result.compute_units_consumed);
-            panic!("This transaction should have failed - The admin did not sign");
-        }
-        Err(error) => {
-            println!("Program failed: {:?}", error);
-            println!("Transaction failed successfully");
-        }
-    }
+    assert_transaction_error(
+        svm.send_transaction(transaction),
+        TransactionError::SignatureFailure,
+    );
 }

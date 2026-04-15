@@ -1,16 +1,17 @@
-use std::path::{Path, PathBuf};
-use litesvm::LiteSVM;
-use solana_sdk::{
-        account::Account as SolanaAccount, clock::Clock, ed25519_instruction::new_ed25519_instruction_with_signature, hash::hashv, instruction::Instruction, pubkey::Pubkey, signer::{
-            EncodableKey, Signer, keypair::Keypair
-        }
-};
-use zero_fun::{
-    GameSession, GlobalState, ID as ZERO_FUN_PROGRAM_ID
-};
 use anchor_lang::{
     AccountSerialize,
     Space,
+    error::Error as AnchorError,
+};
+use litesvm::LiteSVM;
+use litesvm::types::{TransactionMetadata, TransactionResult};
+use solana_sdk::{
+        account::Account as SolanaAccount, clock::Clock, ed25519_instruction::new_ed25519_instruction_with_signature, hash::hashv, instruction::{Instruction, InstructionError}, pubkey::Pubkey, signer::{
+            Signer, keypair::Keypair
+        }, transaction::TransactionError
+};
+use zero_fun::{
+    GameError, GameSession, GlobalState, ID as ZERO_FUN_PROGRAM_ID
 };
 
 
@@ -68,6 +69,49 @@ pub fn add_zero_fun_program(litesvm:&mut LiteSVM){
     let binary_path = include_bytes!("../../../../target/deploy/zero_fun.so");
 
     litesvm.add_program(ZERO_FUN_PROGRAM_ID, binary_path);
+}
+
+#[track_caller]
+pub fn assert_transaction_success(result: TransactionResult) -> TransactionMetadata {
+    match result {
+        Ok(metadata) => metadata,
+        Err(error) => panic!("Expected transaction to succeed, but it failed: {error:?}"),
+    }
+}
+
+#[track_caller]
+pub fn assert_transaction_error(result: TransactionResult, expected_error: TransactionError) {
+    match result {
+        Ok(metadata) => panic!(
+            "Expected transaction to fail with {expected_error:?}, but it succeeded (compute units: {:?})",
+            metadata.compute_units_consumed
+        ),
+        Err(error) => assert_eq!(error.err, expected_error),
+    }
+}
+
+#[track_caller]
+pub fn assert_custom_transaction_error(result: TransactionResult, error: GameError) {
+    assert_custom_transaction_error_at(result, 0, error);
+}
+
+#[track_caller]
+pub fn assert_custom_transaction_error_at(
+    result: TransactionResult,
+    instruction_index: u8,
+    error: GameError,
+) {
+    let expected_error = match AnchorError::from(error) {
+        AnchorError::AnchorError(anchor_error) => TransactionError::InstructionError(
+            instruction_index,
+            InstructionError::Custom(anchor_error.error_code_number),
+        ),
+        AnchorError::ProgramError(program_error) => panic!(
+            "Expected an Anchor error, but got a program error: {program_error:?}"
+        ),
+    };
+
+    assert_transaction_error(result, expected_error);
 }
 
 pub fn disable_signer(instruction:&mut Instruction, key:Pubkey){
