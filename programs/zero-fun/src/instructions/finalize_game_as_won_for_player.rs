@@ -1,16 +1,12 @@
 use anchor_lang::{
-    prelude::*,
-    solana_program::sysvar::instructions::ID as INSTRUCTIONS_SYSVAR_ADDRESS
+    prelude::*, solana_program::sysvar::instructions::ID as INSTRUCTIONS_SYSVAR_ADDRESS,
 };
 
-use crate::{
-    FinalizeGameAsWonForPlayerEvent, GameError, GameSession, GlobalState
-};
-
+use crate::{FinalizeGameAsWonForPlayerEvent, GameError, GameSession, GlobalState};
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
 pub struct FinalizeGameAsWonForPlayerArgs {
-    pub payout:u64
+    pub payout: u64,
 }
 
 #[derive(Accounts)]
@@ -21,17 +17,13 @@ pub struct FinalizeGameAsWonForPlayerAccounts<'info> {
         // get the rent for the vault & game session
         close = vault
     )]
-    pub game_session: Account<'info, GameSession>, 
+    pub game_session: Account<'info, GameSession>,
 
-    #[account(
-        mut
-    )]
+    #[account(mut)]
     pub player: SystemAccount<'info>,
 
     /// CHECK: This is the vault account where the player's deposit is stored.
-    #[account(
-        mut
-    )]    
+    #[account(mut)]
     pub user_vault: UncheckedAccount<'info>,
 
     /// CHECK: This is the global vault account.
@@ -44,14 +36,11 @@ pub struct FinalizeGameAsWonForPlayerAccounts<'info> {
 
     pub global_state: Account<'info, GlobalState>,
 
-    pub admin:Signer<'info>
+    pub admin: Signer<'info>,
 }
 
 #[inline(always)]
-fn checks(
-    ctx: &Context<FinalizeGameAsWonForPlayerAccounts>
-)->Result<()>{
-
+fn checks(ctx: &Context<FinalizeGameAsWonForPlayerAccounts>) -> Result<()> {
     // Verify that the game session has been marked as won by the player
     require!(
         ctx.accounts.game_session.is_won(),
@@ -59,12 +48,16 @@ fn checks(
     );
 
     require!(
-        ctx.accounts.game_session.is_owned_by_player(ctx.accounts.player.key),
+        ctx.accounts
+            .game_session
+            .is_owned_by_player(ctx.accounts.player.key),
         GameError::InvalidPlayer
     );
 
     require!(
-        ctx.accounts.game_session.is_vault_for_game(ctx.accounts.user_vault.key),
+        ctx.accounts
+            .game_session
+            .is_vault_for_game(ctx.accounts.user_vault.key),
         GameError::InvalidVault
     );
 
@@ -77,34 +70,30 @@ fn checks(
 }
 
 pub fn finalize_game_as_won_for_player_handler(
-    ctx:Context<FinalizeGameAsWonForPlayerAccounts>,
-    args:FinalizeGameAsWonForPlayerArgs
-)->Result<()>{
-
+    ctx: Context<FinalizeGameAsWonForPlayerAccounts>,
+    args: FinalizeGameAsWonForPlayerArgs,
+) -> Result<()> {
     checks(&ctx)?;
 
-    
     // Transfer the winnings to the player
-    **ctx.accounts.player.try_borrow_mut_lamports()? += 
-    ctx.accounts.game_session.deposit + args.payout;
-    
+    **ctx.accounts.player.try_borrow_mut_lamports()? +=
+        ctx.accounts.game_session.deposit + args.payout;
+
     let rent_exempt_fee = ctx.accounts.user_vault.lamports() - ctx.accounts.game_session.deposit;
-    
-    // The vault has had it's lamports(both the deposit and rent) transferred 
+
+    // The vault has had it's lamports(both the deposit and rent) transferred
     // back to the user and global vault
     **ctx.accounts.user_vault.try_borrow_mut_lamports()? = 0;
-    
-    // In return for closing the game for the user the admin would get 
+
+    // In return for closing the game for the user the admin would get
     // the rent for the vault & game session, that is deducted from the payout
     **ctx.accounts.vault.try_borrow_mut_lamports()? -= args.payout - rent_exempt_fee;
 
-    emit!(
-        FinalizeGameAsWonForPlayerEvent{
-            admin:ctx.accounts.admin.key(),
-            payout:args.payout,
-            game_session:ctx.accounts.game_session.key()
-        }
-    );
+    emit!(FinalizeGameAsWonForPlayerEvent {
+        admin: ctx.accounts.admin.key(),
+        payout: args.payout,
+        game_session: ctx.accounts.game_session.key()
+    });
 
     Ok(())
 }

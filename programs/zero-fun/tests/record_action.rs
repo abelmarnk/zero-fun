@@ -1,30 +1,22 @@
 use anchor_lang::InstructionData;
-use litesvm::LiteSVM;
 use anyhow::Result;
+use litesvm::LiteSVM;
 use solana_sdk::{
-    instruction::{AccountMeta, Instruction}, 
-    pubkey::Pubkey, signer::{Signer, keypair::Keypair}, 
-    transaction::Transaction
+    instruction::{AccountMeta, Instruction},
+    pubkey::Pubkey,
+    signer::{keypair::Keypair, Signer},
+    transaction::Transaction,
 };
 
 mod common;
 use common::utils::{
-    assert_custom_transaction_error,
-    assert_transaction_success,
-    add_zero_fun_program,
-    create_game_session_account,
-    create_global_state_account,
+    add_zero_fun_program, assert_custom_transaction_error_at, assert_transaction_success,
+    create_game_session_account, create_global_state_account,
 };
 
 use zero_fun::{
-    instruction::{RecordAction},
-    instructions::RecordActionArgs,
-    GameSession,
-    GameSessionStatus,
-    GlobalState,
-    GameState,
-    HASH_LENGTH,
-    ID as ZERO_FUN_PROGRAM_ID,
+    instruction::RecordAction, instructions::RecordActionArgs, GameSession, GameSessionStatus,
+    GameState, GlobalState, HASH_LENGTH, ID as ZERO_FUN_PROGRAM_ID,
 };
 
 struct TestSetup {}
@@ -120,7 +112,9 @@ impl TestSetup {
         )
     }
 
-    pub fn with_inactive_game_session(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
+    pub fn with_inactive_game_session(
+        svm: &mut LiteSVM,
+    ) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
 
@@ -133,7 +127,9 @@ impl TestSetup {
         )
     }
 
-    pub fn with_inactive_global_state(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
+    pub fn with_inactive_global_state(
+        svm: &mut LiteSVM,
+    ) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
 
@@ -164,12 +160,8 @@ fn test_record_action_success() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&payer),
-        &signers,
-        recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_transaction_success(svm.send_transaction(transaction));
 }
@@ -191,15 +183,12 @@ fn test_record_action_fails_with_invalid_player() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&payer),
-        &signers,
-        recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidPlayer,
     );
 }
@@ -221,15 +210,12 @@ fn test_record_action_fails_with_inactive_game_session() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&payer),
-        &signers,
-        recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::GameSessionNotActive,
     );
 }
@@ -251,15 +237,12 @@ fn test_record_action_fails_with_inactive_global_state() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&payer),
-        &signers,
-        recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::GameNotActive,
     );
 }

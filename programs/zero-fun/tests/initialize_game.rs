@@ -1,28 +1,26 @@
 use anchor_lang::InstructionData;
-use litesvm::LiteSVM;
 use anyhow::Result;
+use litesvm::LiteSVM;
 use solana_sdk::{
-    instruction::{Instruction, AccountMeta},
+    instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    signer::{Signer, keypair::Keypair},
-    transaction::Transaction,
+    signer::{keypair::Keypair, Signer},
     system_program::ID as SYSTEM_PROGRAM_ID,
+    transaction::Transaction,
 };
 
 mod common;
 use common::utils::{
-    assert_custom_transaction_error,
-    assert_transaction_success,
-    add_zero_fun_program,
-    create_global_state_account,
-    create_vault_account,
+    add_zero_fun_program, assert_custom_transaction_error_at, assert_transaction_success,
+    create_global_state_account, create_vault_account,
 };
 
 use zero_fun::{
-    GameState, GlobalState, HASH_LENGTH, ID as ZERO_FUN_PROGRAM_ID, InitializeGameArgs, MAX_METADATA_LENGTH, instruction::InitializeGame
+    instruction::InitializeGame, GameState, GlobalState, InitializeGameArgs, HASH_LENGTH,
+    ID as ZERO_FUN_PROGRAM_ID, MAX_METADATA_LENGTH,
 };
 
-// Here what is relevant is that the player should have signed(the system program would test this), 
+// Here what is relevant is that the player should have signed(the system program would test this),
 // the metadata should be within bounds, the game is active as the deposit is within bounds.
 // Other stuff is filled with defaults.
 
@@ -41,10 +39,10 @@ impl TestSetup {
         max_deposit_bps: u8,
         game_state: GameState,
     ) -> Result<([Instruction; 1], Vec<Keypair>)> {
-
         // Create the player account
         let player = Keypair::new();
-        svm.airdrop(&player.pubkey(), 1_000_000_000).expect("Could not airdrop to player");
+        svm.airdrop(&player.pubkey(), 1_000_000_000)
+            .expect("Could not airdrop to player");
 
         // Create the PDAs
         let (game_session, _) = Pubkey::find_program_address(
@@ -69,7 +67,7 @@ impl TestSetup {
                 player.pubkey().as_ref(),
             ],
             &Self::ZERO_FUN_PROGRAM_ID,
-        );        
+        );
 
         // Create the global state account
         let global_state_account = GlobalState {
@@ -97,7 +95,7 @@ impl TestSetup {
         ];
 
         let args = InitializeGameArgs {
-            public_config_seed:[0u8; HASH_LENGTH],
+            public_config_seed: [0u8; HASH_LENGTH],
             game_metadata: metadata,
             deposit,
         };
@@ -118,7 +116,14 @@ impl TestSetup {
         let max_deposit_bps = 10u8;
         let game_state = GameState::Active;
 
-        Self::builder(svm, metadata, deposit, vault_balance, max_deposit_bps, game_state)
+        Self::builder(
+            svm,
+            metadata,
+            deposit,
+            vault_balance,
+            max_deposit_bps,
+            game_state,
+        )
     }
 
     pub fn with_metadata_too_long(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
@@ -128,7 +133,14 @@ impl TestSetup {
         let max_deposit_bps = 10u8;
         let game_state = GameState::Active;
 
-        Self::builder(svm, metadata, deposit, vault_balance, max_deposit_bps, game_state)
+        Self::builder(
+            svm,
+            metadata,
+            deposit,
+            vault_balance,
+            max_deposit_bps,
+            game_state,
+        )
     }
 
     pub fn with_deposit_exceeds_max(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
@@ -138,7 +150,14 @@ impl TestSetup {
         let max_deposit_bps = 1u8;
         let game_state = GameState::Active;
 
-        Self::builder(svm, metadata, deposit, vault_balance, max_deposit_bps, game_state)
+        Self::builder(
+            svm,
+            metadata,
+            deposit,
+            vault_balance,
+            max_deposit_bps,
+            game_state,
+        )
     }
 
     pub fn with_game_not_active(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
@@ -148,10 +167,16 @@ impl TestSetup {
         let max_deposit_bps = 10u8;
         let game_state = GameState::Locked; // Games can only be created when the game is active
 
-        Self::builder(svm, metadata, deposit, vault_balance, max_deposit_bps, game_state)
+        Self::builder(
+            svm,
+            metadata,
+            deposit,
+            vault_balance,
+            max_deposit_bps,
+            game_state,
+        )
     }
 }
-
 
 #[test]
 fn test_initialize_game_success() {
@@ -170,10 +195,9 @@ fn test_initialize_game_success() {
     let payer = signers[0].pubkey();
 
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_transaction_success(svm.send_transaction(transaction));
 }
@@ -195,13 +219,13 @@ fn test_initialize_game_fails_when_metadata_too_long() {
     let payer = signers[0].pubkey();
 
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
 
-    assert_custom_transaction_error(
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::MetadataTooLong,
     );
 }
@@ -223,13 +247,13 @@ fn test_initialize_game_fails_when_deposit_exceeds_max() {
     let payer = signers[0].pubkey();
 
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
 
-    assert_custom_transaction_error(
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::DepositExceedsMaximum,
     );
 }
@@ -251,13 +275,13 @@ fn test_initialize_game_fails_when_game_not_active() {
     let payer = signers[0].pubkey();
 
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
 
-    assert_custom_transaction_error(
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::GameNotActive,
     );
 }

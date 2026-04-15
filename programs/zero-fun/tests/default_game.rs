@@ -1,28 +1,21 @@
 use anchor_lang::InstructionData;
-use litesvm::LiteSVM;
 use anyhow::Result;
+use litesvm::LiteSVM;
 use solana_sdk::{
-    instruction::{AccountMeta, Instruction}, 
-    pubkey::Pubkey, signer::{Signer, keypair::Keypair}, 
-    transaction::Transaction
+    instruction::{AccountMeta, Instruction},
+    pubkey::Pubkey,
+    signer::{keypair::Keypair, Signer},
+    transaction::Transaction,
 };
 
 mod common;
 use common::utils::{
-    assert_custom_transaction_error,
-    assert_transaction_success,
-    add_zero_fun_program,
-    create_game_session_account,
-    create_vault_account,
-    set_current_time
+    add_zero_fun_program, assert_custom_transaction_error_at, assert_transaction_success,
+    create_game_session_account, create_vault_account, set_current_time,
 };
 
 use zero_fun::{
-    instruction::DefaultGame,
-    GameSession,
-    GameSessionStatus,
-    DEFAULT_OFFSET,
-    HASH_LENGTH,
+    instruction::DefaultGame, GameSession, GameSessionStatus, DEFAULT_OFFSET, HASH_LENGTH,
     ID as ZERO_FUN_PROGRAM_ID,
 };
 
@@ -40,7 +33,6 @@ impl TestSetup {
         last_action_time: i64,
         current_time: i64,
     ) -> Result<([Instruction; 1], Vec<Keypair>)> {
-
         // Create the player account
         svm.airdrop(&instruction_player.pubkey(), 1_000_000_000)
             .expect("Could not airdrop to player");
@@ -60,7 +52,7 @@ impl TestSetup {
             player: state_player,
             deposit: 1_000_000u64,
             status: GameSessionStatus::Active,
-            public_config_seed:[0u8; HASH_LENGTH],
+            public_config_seed: [0u8; HASH_LENGTH],
             game_metadata: "metadata".to_string(),
             player_moves: [0u8; zero_fun::MAX_MOVE_COUNT],
             vault: state_vault,
@@ -82,8 +74,8 @@ impl TestSetup {
         // Build the instruction
         let accounts: Vec<AccountMeta> = vec![
             AccountMeta::new(instruction_player.pubkey(), true),
-            AccountMeta::new(instruction_vault, false),   
-            AccountMeta::new(game_session, false), 
+            AccountMeta::new(instruction_vault, false),
+            AccountMeta::new(game_session, false),
         ];
 
         let instruction = Instruction {
@@ -168,7 +160,7 @@ impl TestSetup {
 
         let current_time = 123456789i64;
 
-        // Here the last action time is greater than the distance from the offset 
+        // Here the last action time is greater than the distance from the offset
         // so it should fail
         let last_action_time = (current_time - DEFAULT_OFFSET) + 10;
 
@@ -183,7 +175,6 @@ impl TestSetup {
         )
     }
 }
-
 
 #[test]
 fn test_default_game_success() {
@@ -203,9 +194,8 @@ fn test_default_game_success() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_transaction_success(svm.send_transaction(transaction));
 }
@@ -228,10 +218,12 @@ fn test_default_game_fails_with_invalid_vault() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidVault,
     );
 }
@@ -254,10 +246,12 @@ fn test_default_game_fails_with_invalid_player() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidPlayer,
     );
 }
@@ -279,10 +273,12 @@ fn test_default_game_fails_when_too_soon_to_default() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::TooSoonToDefault,
     );
 }

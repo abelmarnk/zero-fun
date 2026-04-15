@@ -1,10 +1,10 @@
 use anchor_lang::{
-    prelude::*, 
+    prelude::*,
     solana_program::{
-        ed25519_program::ID as ED25519_ADDRESS, 
-        hash::{Hash, hashv},
-        sysvar::instructions::load_instruction_at_checked
-    }
+        ed25519_program::ID as ED25519_ADDRESS,
+        hash::{hashv, Hash},
+        sysvar::instructions::load_instruction_at_checked,
+    },
 };
 
 use crate::GameError;
@@ -24,85 +24,89 @@ pub struct Ed25519SignatureOffsets {
 
 /// Checks if an ED25519 signature is valid, the implementation is gotten from here:-
 /// https://github.com/anza-xyz/solana-sdk/blob/ae3b4e7bdab8d701f7a928fe2e9194229f36cce3/ed25519-program/src/lib.rs#L59
-pub fn is_signature_valid(instruction_sysvar:&AccountInfo, message:&[&[u8]], 
-        message_signer:&Pubkey)->Result<()>{
-        let message_hash = hashv(message);
+pub fn is_signature_valid(
+    instruction_sysvar: &AccountInfo,
+    message: &[&[u8]],
+    message_signer: &Pubkey,
+) -> Result<()> {
+    let message_hash = hashv(message);
 
-        let ed25519_instruction = 
-            load_instruction_at_checked(0, instruction_sysvar)?;
+    let ed25519_instruction = load_instruction_at_checked(0, instruction_sysvar)?;
 
-        require_keys_eq!(
-            ed25519_instruction.program_id,
-            ED25519_ADDRESS,
-            GameError::InvalidED25519Program
-        );
+    require_keys_eq!(
+        ed25519_instruction.program_id,
+        ED25519_ADDRESS,
+        GameError::InvalidED25519Program
+    );
 
-        msg!("Data for ED25519 program: {:?}", ed25519_instruction.data);
+    msg!("Data for ED25519 program: {:?}", ed25519_instruction.data);
 
-        require_eq!(
-            ed25519_instruction.accounts.len(),
-            0,
-            GameError::InvalidAccountCountForED25519Program
-        );
+    require_eq!(
+        ed25519_instruction.accounts.len(),
+        0,
+        GameError::InvalidAccountCountForED25519Program
+    );
 
-        msg!("-1");
+    msg!("-1");
 
-        if ed25519_instruction.data.len().le(&14)
-            || *ed25519_instruction.data.get(0).unwrap() != 1
-            || *ed25519_instruction.data.get(1).unwrap() != 0
-        {
-            return Err(GameError::InvalidDataForED25519Program.into());
-        }
+    if ed25519_instruction.data.len().le(&14)
+        || *ed25519_instruction.data.get(0).unwrap() != 1
+        || *ed25519_instruction.data.get(1).unwrap() != 0
+    {
+        return Err(GameError::InvalidDataForED25519Program.into());
+    }
 
-        msg!("-2");
+    msg!("-2");
 
-        let mut data = ed25519_instruction.data.get(2..16)
-            .ok_or(GameError::InvalidDataForED25519Program)?;
+    let mut data = ed25519_instruction
+        .data
+        .get(2..16)
+        .ok_or(GameError::InvalidDataForED25519Program)?;
 
-        msg!("-3");
+    msg!("-3");
 
-        let offsets = Ed25519SignatureOffsets::deserialize(&mut data)
-            .map_err(|_| GameError::InvalidDataForED25519Program)?;
+    let offsets = Ed25519SignatureOffsets::deserialize(&mut data)
+        .map_err(|_| GameError::InvalidDataForED25519Program)?;
 
-        msg!("-4");
+    msg!("-4");
 
-        let pubkey_offset = usize::from(offsets.public_key_offset);
-        let pubkey_end = pubkey_offset + core::mem::size_of::<Pubkey>();
-        let pubkey_bytes = ed25519_instruction
-            .data
-            .get(pubkey_offset..pubkey_end)
-            .ok_or(GameError::InvalidDataForED25519Program)?;
+    let pubkey_offset = usize::from(offsets.public_key_offset);
+    let pubkey_end = pubkey_offset + core::mem::size_of::<Pubkey>();
+    let pubkey_bytes = ed25519_instruction
+        .data
+        .get(pubkey_offset..pubkey_end)
+        .ok_or(GameError::InvalidDataForED25519Program)?;
 
-        msg!("-5");
+    msg!("-5");
 
-        if *message_signer.as_array() != *pubkey_bytes {
-            return Err(GameError::InvalidMessageSigner.into());
-        }
+    if *message_signer.as_array() != *pubkey_bytes {
+        return Err(GameError::InvalidMessageSigner.into());
+    }
 
-        msg!("-6");        
+    msg!("-6");
 
-        require_eq!(
-            usize::from(offsets.message_data_size),
-            core::mem::size_of::<Hash>(),
-            GameError::InvalidCommitment
-        );
+    require_eq!(
+        usize::from(offsets.message_data_size),
+        core::mem::size_of::<Hash>(),
+        GameError::InvalidCommitment
+    );
 
-        msg!("-7");        
+    msg!("-7");
 
-        let msg_offset = usize::from(offsets.message_data_offset);
-        let msg_end = msg_offset + core::mem::size_of::<Hash>();
-        let msg_bytes = ed25519_instruction
-            .data
-            .get(msg_offset..msg_end)
-            .ok_or(GameError::InvalidDataForED25519Program)?;
+    let msg_offset = usize::from(offsets.message_data_offset);
+    let msg_end = msg_offset + core::mem::size_of::<Hash>();
+    let msg_bytes = ed25519_instruction
+        .data
+        .get(msg_offset..msg_end)
+        .ok_or(GameError::InvalidDataForED25519Program)?;
 
-        msg!("-8");
+    msg!("-8");
 
-        if *message_hash.as_ref() != *msg_bytes {
-            return Err(GameError::InvalidCommitment.into());
-        }
+    if *message_hash.as_ref() != *msg_bytes {
+        return Err(GameError::InvalidCommitment.into());
+    }
 
-        msg!("-9");
+    msg!("-9");
 
-        Ok(())
+    Ok(())
 }

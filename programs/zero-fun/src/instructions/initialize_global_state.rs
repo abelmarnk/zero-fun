@@ -1,19 +1,18 @@
-use anchor_lang::prelude::*;
 use crate::{GameState, GlobalState};
+use anchor_lang::prelude::*;
 
-
-const INITIALIZER_KEY:Pubkey = pubkey!("4w5ezXcjV8RdJLPAQmwVonevgUVfuAZSDMdWtURc1CRY");
+const INITIALIZER_KEY: Pubkey = pubkey!("4w5ezXcjV8RdJLPAQmwVonevgUVfuAZSDMdWtURc1CRY");
 
 /// Arguments for initializing the global state.
 /// - max_deposit: Maximum deposit allowed (in bps).
 /// - max_payout: Maximum payout allowed (in bps).
-/// - initial_state: The initial state the game is in, 
+/// - initial_state: The initial state the game is in,
 /// it can be changed later.
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
 pub struct InitializeGlobalStateArgs {
     pub max_deposit: u8,
     pub max_payout: u8,
-    pub initial_state:GameState
+    pub initial_state: GameState,
 }
 
 #[derive(Accounts)]
@@ -28,9 +27,7 @@ pub struct InitializeGlobalStateAccounts<'info> {
     )]
     pub global_state: Account<'info, GlobalState>,
 
-    #[account(
-        mut
-    )]
+    #[account(mut)]
     pub initializer: Signer<'info>,
 
     #[account(
@@ -45,16 +42,14 @@ pub struct InitializeGlobalStateAccounts<'info> {
     // This is added as a signer to guarantee the account is controlled by them
     pub message_signer: Signer<'info>,
 
-    // This is added as a signer to guarantee the account is controlled by them    
+    // This is added as a signer to guarantee the account is controlled by them
     pub admin: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }
 
 #[inline(always)]
-fn checks(
-    ctx: &Context<InitializeGlobalStateAccounts>
-)->Result<()>{
+fn checks(ctx: &Context<InitializeGlobalStateAccounts>) -> Result<()> {
     // Ensure the initializer is the bootstrap key
     require_keys_eq!(
         ctx.accounts.initializer.key(),
@@ -65,12 +60,10 @@ fn checks(
     Ok(())
 }
 
-
 pub fn initialize_global_state_handler(
     ctx: Context<InitializeGlobalStateAccounts>,
-    args: InitializeGlobalStateArgs
+    args: InitializeGlobalStateArgs,
 ) -> Result<()> {
-
     checks(&ctx)?;
 
     let global_state = &mut ctx.accounts.global_state;

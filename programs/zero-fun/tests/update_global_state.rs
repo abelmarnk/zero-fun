@@ -1,52 +1,43 @@
 use anchor_lang::InstructionData;
-use litesvm::LiteSVM;
 use anyhow::Result;
+use litesvm::LiteSVM;
 use solana_sdk::{
-    instruction::{Instruction, AccountMeta},
+    instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    signer::{Signer, keypair::Keypair},
+    signer::{keypair::Keypair, Signer},
     transaction::Transaction,
 };
 
 mod common;
 
 use common::utils::{
-    assert_custom_transaction_error,
-    assert_transaction_error,
-    assert_transaction_success,
-    add_zero_fun_program,
-    create_global_state_account,
+    add_zero_fun_program, assert_custom_transaction_error_at, assert_transaction_error,
+    assert_transaction_success, create_global_state_account,
 };
 
 use zero_fun::{
-    instruction::UpdateGlobalState,
-    UpdateGlobalStateArgs,
-    GlobalStateUpdate,
-    GameState,
-    GlobalState,
-    ID as ZERO_FUN_PROGRAM_ID,
+    instruction::UpdateGlobalState, GameState, GlobalState, GlobalStateUpdate,
+    UpdateGlobalStateArgs, ID as ZERO_FUN_PROGRAM_ID,
 };
 
-use solana_sdk::transaction::TransactionError;
+use solana_sdk::{instruction::InstructionError, transaction::TransactionError};
 
-use crate::common::disable_signer;
+use common::utils::disable_signer;
 
-// Here what is important is that the global state can only be updated by the admin, 
+// Here what is important is that the global state can only be updated by the admin,
 // and their signature is required, other stuff is filled with defaults
 struct TestSetup {}
 
 impl TestSetup {
     const ZERO_FUN_PROGRAM_ID: Pubkey = ZERO_FUN_PROGRAM_ID;
 
-    pub fn with_default(svm: &mut LiteSVM) 
-        -> Result<([Instruction; 1], Vec<Keypair>)> {
+    pub fn with_default(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let admin = Keypair::new();
 
         Self::builder(svm, admin.insecure_clone(), admin)
     }
 
-    pub fn with_invalid_admin(svm: &mut LiteSVM) 
-        -> Result<([Instruction; 1], Vec<Keypair>)> {
+    pub fn with_invalid_admin(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let admin = Keypair::new();
 
         let invalid_admin = Keypair::new();
@@ -54,17 +45,21 @@ impl TestSetup {
         Self::builder(svm, admin, invalid_admin)
     }
 
-    fn builder(svm: &mut LiteSVM, state_admin: Keypair, instruction_admin: Keypair) 
-        -> Result<([Instruction; 1], Vec<Keypair>)> {
-
+    fn builder(
+        svm: &mut LiteSVM,
+        state_admin: Keypair,
+        instruction_admin: Keypair,
+    ) -> Result<([Instruction; 1], Vec<Keypair>)> {
         // Create the admin account
         svm.airdrop(&state_admin.pubkey(), 1_000_000_000).unwrap();
+        if instruction_admin.pubkey() != state_admin.pubkey() {
+            svm.airdrop(&instruction_admin.pubkey(), 1_000_000_000)
+                .unwrap();
+        }
 
         // Create the global state account
         let (global_state_key, _) =
-            Pubkey::find_program_address(
-                &[b"global-state"], &Self::ZERO_FUN_PROGRAM_ID
-            );
+            Pubkey::find_program_address(&[b"global-state"], &Self::ZERO_FUN_PROGRAM_ID);
 
         let global_state = GlobalState {
             admin: state_admin.pubkey(),
@@ -114,10 +109,9 @@ fn test_update_global_state_success() {
     let recent_blockhash = svm.latest_blockhash();
 
     let payer = signers[0].pubkey();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_transaction_success(svm.send_transaction(transaction));
 }
@@ -139,13 +133,13 @@ fn test_update_global_state_fails_with_invalid_admin() {
     let recent_blockhash = svm.latest_blockhash();
 
     let payer = signers[0].pubkey();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
 
-    assert_custom_transaction_error(
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
+
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidAdmin,
     );
 }
@@ -165,21 +159,27 @@ fn test_update_global_state_fails_when_admin_does_not_sign() {
     };
 
     disable_signer(&mut instructions[0], signers[0].pubkey());
-    
+
     let recent_blockhash = svm.latest_blockhash();
-    
+
     let payer = Keypair::new();
 
     let payer_key = payer.pubkey();
-    
+
+    svm.airdrop(&payer_key, 1_000_000_000)
+        .expect("Could not airdrop to payer");
+
     signers[0] = payer;
-    
+
     let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer_key), &signers, recent_blockhash,
+        &instructions,
+        Some(&payer_key),
+        &signers,
+        recent_blockhash,
     );
 
     assert_transaction_error(
         svm.send_transaction(transaction),
-        TransactionError::SignatureFailure,
+        TransactionError::InstructionError(0, InstructionError::Custom(3010)),
     );
 }

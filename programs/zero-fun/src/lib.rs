@@ -19,7 +19,7 @@ pub mod game_i {
     /// This sets configuration parameters and creates the global vault account.
     pub fn initialize_global_state(
         ctx: Context<InitializeGlobalStateAccounts>,
-        args: InitializeGlobalStateArgs
+        args: InitializeGlobalStateArgs,
     ) -> Result<()> {
         initialize_global_state_handler(ctx, args)
     }
@@ -33,10 +33,7 @@ pub mod game_i {
     }
 
     /// Records a player action (move) on-chain during an active game session.
-    pub fn record_action(
-        ctx: Context<RecordActionAccounts>,
-        args: RecordActionArgs,
-    ) -> Result<()> {
+    pub fn record_action(ctx: Context<RecordActionAccounts>, args: RecordActionArgs) -> Result<()> {
         record_action_handler(ctx, args)
     }
 
@@ -50,9 +47,7 @@ pub mod game_i {
 
     /// Allows a player to default (cancel) their game if the session has expired.
     /// Used as a fallback to reclaim deposits in stalled games.
-    pub fn default_game(
-        ctx: Context<DefaultGameAccounts>
-    ) -> Result<()> {
+    pub fn default_game(ctx: Context<DefaultGameAccounts>) -> Result<()> {
         default_game_handler(ctx)
     }
 
@@ -85,17 +80,12 @@ pub mod game_i {
 
     /// Allows a player to mark the game as won if the admin is unresponsive.
     /// This broadcasts the player's claim on-chain, requiring the admin to later settle it.
-    pub fn mark_game_as_won(
-        ctx: Context<MarkGameAsWonAccounts>,
-    )-> Result<()>{
+    pub fn mark_game_as_won(ctx: Context<MarkGameAsWonAccounts>) -> Result<()> {
         mark_game_as_won_handler(ctx)
     }
-    
+
     /// Withdraws funds (admin-only). Used to withdraw accumulated fees from the global vault.
-    pub fn withdraw(
-        ctx: Context<WithdrawAccounts>,
-        args: WithdrawArgs,
-    ) -> Result<()> {
+    pub fn withdraw(ctx: Context<WithdrawAccounts>, args: WithdrawArgs) -> Result<()> {
         withdraw_handler(ctx, args)
     }
 }

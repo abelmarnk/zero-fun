@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::{GlobalState, WithdrawEvent};
+use anchor_lang::prelude::*;
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
 pub struct WithdrawArgs {
@@ -18,9 +18,7 @@ pub struct WithdrawAccounts<'info> {
     /// CHECK: Vault account from which funds will be withdrawn
     pub vault: UncheckedAccount<'info>,
 
-    #[account(
-        mut
-    )]
+    #[account(mut)]
     /// CHECK: Vault recipient account to receive the withdrawn funds
     pub recipient: UncheckedAccount<'info>,
 
@@ -29,11 +27,8 @@ pub struct WithdrawAccounts<'info> {
     pub system_program: Program<'info, System>,
 }
 
-
 #[inline(always)]
-fn checks(
-    ctx: &Context<WithdrawAccounts>
-) -> Result<()> {
+fn checks(ctx: &Context<WithdrawAccounts>) -> Result<()> {
     require!(
         ctx.accounts.global_state.is_admin(ctx.accounts.admin.key),
         crate::GameError::InvalidAdmin
@@ -42,22 +37,25 @@ fn checks(
     Ok(())
 }
 
-pub fn withdraw_handler(
-    ctx: Context<WithdrawAccounts>,
-    args: WithdrawArgs,
-) -> Result<()> {
+pub fn withdraw_handler(ctx: Context<WithdrawAccounts>, args: WithdrawArgs) -> Result<()> {
     checks(&ctx)?;
 
-    **ctx.accounts.vault.to_account_info().try_borrow_mut_lamports()? -= args.amount;
-    **ctx.accounts.recipient.to_account_info().try_borrow_mut_lamports()? += args.amount;
+    **ctx
+        .accounts
+        .vault
+        .to_account_info()
+        .try_borrow_mut_lamports()? -= args.amount;
+    **ctx
+        .accounts
+        .recipient
+        .to_account_info()
+        .try_borrow_mut_lamports()? += args.amount;
 
-    emit!(
-        WithdrawEvent{
-            admin:ctx.accounts.admin.key(),
-            recipient:ctx.accounts.recipient.key(),
-            amount:args.amount
-        }
-    );
+    emit!(WithdrawEvent {
+        admin: ctx.accounts.admin.key(),
+        recipient: ctx.accounts.recipient.key(),
+        amount: args.amount
+    });
 
     Ok(())
 }

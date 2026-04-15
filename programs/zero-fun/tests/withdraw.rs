@@ -1,32 +1,24 @@
 use anchor_lang::InstructionData;
-use litesvm::LiteSVM;
 use anyhow::Result;
+use litesvm::LiteSVM;
 use solana_sdk::{
-    instruction::{Instruction, AccountMeta},
+    instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    signer::{Signer, keypair::Keypair},
-    transaction::Transaction,
+    signer::{keypair::Keypair, Signer},
     system_program::ID as SYSTEM_PROGRAM_ID,
+    transaction::Transaction,
 };
 
 mod common;
 
 use common::utils::{
-    assert_custom_transaction_error,
-    assert_transaction_success,
-    add_zero_fun_program,
-    create_global_state_account,
-    create_vault_account,
+    add_zero_fun_program, assert_custom_transaction_error_at, assert_transaction_success,
+    create_global_state_account, create_vault_account,
 };
 
 use zero_fun::{
-    instruction::Withdraw,
-    WithdrawArgs,
-    GlobalState,
-    GameState,
-    ID as ZERO_FUN_PROGRAM_ID,
+    instruction::Withdraw, GameState, GlobalState, WithdrawArgs, ID as ZERO_FUN_PROGRAM_ID,
 };
-
 
 struct TestSetup {}
 
@@ -50,9 +42,9 @@ impl TestSetup {
         state_admin: Pubkey,
         instruction_admin: Keypair,
     ) -> Result<([Instruction; 1], Vec<Keypair>)> {
-
         // Create the admin account
-        svm.airdrop(&instruction_admin.pubkey(), 1_000_000_000).unwrap();
+        svm.airdrop(&instruction_admin.pubkey(), 1_000_000_000)
+            .unwrap();
 
         // Create the PDAs
         let (global_state_key, _) =
@@ -89,7 +81,9 @@ impl TestSetup {
             AccountMeta::new_readonly(SYSTEM_PROGRAM_ID, false),
         ];
 
-        let args = WithdrawArgs { amount: withdraw_amount };
+        let args = WithdrawArgs {
+            amount: withdraw_amount,
+        };
 
         let withdraw = Instruction {
             program_id: Self::ZERO_FUN_PROGRAM_ID,
@@ -118,9 +112,8 @@ fn test_withdraw_success() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_transaction_success(svm.send_transaction(transaction));
 }
@@ -142,12 +135,12 @@ fn test_withdraw_fails_with_invalid_admin() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidAdmin,
     );
 }

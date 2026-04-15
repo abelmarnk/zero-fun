@@ -1,26 +1,21 @@
 use anchor_lang::InstructionData;
-use litesvm::LiteSVM;
 use anyhow::Result;
+use litesvm::LiteSVM;
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    signer::{Signer, keypair::Keypair},
+    signer::{keypair::Keypair, Signer},
     transaction::Transaction,
 };
 
 mod common;
 use common::utils::{
-    assert_custom_transaction_error,
-    assert_transaction_success,
-    add_zero_fun_program,
+    add_zero_fun_program, assert_custom_transaction_error_at, assert_transaction_success,
     create_game_session_account,
 };
 
 use zero_fun::{
-    instruction::MarkGameAsWon,
-    GameSession,
-    GameSessionStatus,
-    HASH_LENGTH,
+    instruction::MarkGameAsWon, GameSession, GameSessionStatus, HASH_LENGTH,
     ID as ZERO_FUN_PROGRAM_ID,
 };
 
@@ -79,21 +74,36 @@ impl TestSetup {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
 
-        Self::builder(svm, state_player, instruction_player, GameSessionStatus::Active)
+        Self::builder(
+            svm,
+            state_player,
+            instruction_player,
+            GameSessionStatus::Active,
+        )
     }
 
     pub fn with_invalid_player(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let state_player = Pubkey::new_unique();
         let instruction_player = Keypair::new();
 
-        Self::builder(svm, state_player, instruction_player, GameSessionStatus::Active)
+        Self::builder(
+            svm,
+            state_player,
+            instruction_player,
+            GameSessionStatus::Active,
+        )
     }
 
     pub fn with_inactive_game(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
 
-        Self::builder(svm, state_player, instruction_player, GameSessionStatus::Lost)
+        Self::builder(
+            svm,
+            state_player,
+            instruction_player,
+            GameSessionStatus::Lost,
+        )
     }
 }
 
@@ -114,12 +124,8 @@ fn test_mark_game_as_won_success() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&payer),
-        &signers,
-        recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_transaction_success(svm.send_transaction(transaction));
 }
@@ -141,15 +147,12 @@ fn test_mark_game_as_won_fails_with_invalid_player() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&payer),
-        &signers,
-        recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidPlayer,
     );
 }
@@ -171,15 +174,12 @@ fn test_mark_game_as_won_fails_with_inactive_game() {
 
     let recent_blockhash = svm.latest_blockhash();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions,
-        Some(&payer),
-        &signers,
-        recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::GameSessionNotActive,
     );
 }

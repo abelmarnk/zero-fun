@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum GameError{
+pub enum GameError {
     #[msg("The game session has already been finalized.")]
     GameSessionAlreadyFinalized,
     #[msg("The game session not won yet.")]
-    GameSessionNotWon,    
+    GameSessionNotWon,
     #[msg("The provided vault does not match the expected vault.")]
     InvalidVault,
     #[msg("Expected ED25519 program")]
@@ -43,5 +43,5 @@ pub enum GameError{
     #[msg("Invalid game seed")]
     InvalidGameSeed,
     #[msg("Invalid fail position")]
-    InvalidFailPosition
+    InvalidFailPosition,
 }

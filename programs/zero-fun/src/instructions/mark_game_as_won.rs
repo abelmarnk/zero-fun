@@ -2,19 +2,19 @@ use anchor_lang::prelude::*;
 
 use crate::{GameError, GameSession, GameSessionStatus, MarkGameAsWonEvent};
 
-
 #[derive(Accounts)]
-pub struct MarkGameAsWonAccounts<'info>{
-    player:Signer<'info>,
+pub struct MarkGameAsWonAccounts<'info> {
+    player: Signer<'info>,
 
-    game_session:Account<'info, GameSession>,
+    game_session: Account<'info, GameSession>,
 }
 
 #[inline(always)]
-fn checks(ctx:&Context<MarkGameAsWonAccounts>)->Result<()>{
-
+fn checks(ctx: &Context<MarkGameAsWonAccounts>) -> Result<()> {
     require!(
-        ctx.accounts.game_session.is_owned_by_player(ctx.accounts.player.key),
+        ctx.accounts
+            .game_session
+            .is_owned_by_player(ctx.accounts.player.key),
         GameError::InvalidPlayer
     );
 
@@ -26,16 +26,14 @@ fn checks(ctx:&Context<MarkGameAsWonAccounts>)->Result<()>{
     Ok(())
 }
 
-pub fn mark_game_as_won_handler(ctx:Context<MarkGameAsWonAccounts>)->Result<()>{
+pub fn mark_game_as_won_handler(ctx: Context<MarkGameAsWonAccounts>) -> Result<()> {
     checks(&ctx)?;
 
     ctx.accounts.game_session.status = GameSessionStatus::Won;
 
-    emit!(
-        MarkGameAsWonEvent{
-            game_session:ctx.accounts.game_session.key()
-        }
-    );
+    emit!(MarkGameAsWonEvent {
+        game_session: ctx.accounts.game_session.key()
+    });
 
     Ok(())
 }

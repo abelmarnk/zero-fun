@@ -1,35 +1,24 @@
-use anchor_lang::InstructionData;
 use anchor_lang::solana_program::hash::hashv;
-use litesvm::LiteSVM;
+use anchor_lang::InstructionData;
 use anyhow::Result;
+use litesvm::LiteSVM;
 use solana_sdk::{
-    instruction::{Instruction, AccountMeta},
+    instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    signer::{Signer, keypair::Keypair},
+    signer::{keypair::Keypair, Signer},
     transaction::Transaction,
 };
 
 mod common;
 use common::utils::{
-    assert_custom_transaction_error,
-    assert_transaction_success,
-    add_zero_fun_program,
-    create_game_session_account,
-    create_vault_account,
-    create_global_state_account,
+    add_zero_fun_program, assert_custom_transaction_error_at, assert_transaction_success,
+    create_game_session_account, create_global_state_account, create_vault_account,
 };
 
 use zero_fun::{
-    instruction::FinalizeGameAsLost,
-    FinalizeGameAsLostArgs,
-    GameSession,
-    GameSessionStatus,
-    GlobalState,
-    GameState,
-    MAX_MOVE_COUNT,
-    MAX_MOVE_TYPE_COUNT,
+    instruction::FinalizeGameAsLost, FinalizeGameAsLostArgs, GameSession, GameSessionStatus,
+    GameState, GlobalState, ID as ZERO_FUN_PROGRAM_ID, MAX_MOVE_COUNT, MAX_MOVE_TYPE_COUNT,
     PUBLIC_SEED,
-    ID as ZERO_FUN_PROGRAM_ID,
 };
 
 struct TestSetup {}
@@ -47,7 +36,6 @@ impl TestSetup {
         correct_public_config: bool,
         matching_move: bool,
     ) -> Result<([Instruction; 1], Vec<Keypair>)> {
-
         // Create the player
         svm.airdrop(&instruction_player.pubkey(), 1_000_000_000)
             .expect("Could not airdrop to player");
@@ -57,21 +45,15 @@ impl TestSetup {
         let private_config_seed = hashv(&[random_seed.as_ref()]).to_bytes();
 
         // Derive public_config_seed from the private_config_seed
-        let derived_public_config_seed = hashv(&[
-            PUBLIC_SEED.as_ref(),
-            private_config_seed.as_ref(),
-        ])
-        .to_bytes();
+        let derived_public_config_seed =
+            hashv(&[PUBLIC_SEED.as_ref(), private_config_seed.as_ref()]).to_bytes();
 
         // Generate a fail position
         let fail_position = u8::try_from(rand::random_range(0..MAX_MOVE_COUNT)).unwrap();
 
         // Compute public_config_seed_for_move and number of move types for the round
-        let public_config_seed_for_move = hashv(&[
-            &[fail_position],
-            derived_public_config_seed.as_ref(),
-        ])
-        .to_bytes();
+        let public_config_seed_for_move =
+            hashv(&[&[fail_position], derived_public_config_seed.as_ref()]).to_bytes();
 
         let move_type_count_for_round: u8 =
             (public_config_seed_for_move[0] % (u8::try_from(MAX_MOVE_TYPE_COUNT).unwrap() - 1)) + 2;
@@ -151,20 +133,19 @@ impl TestSetup {
         let rent = svm.minimum_balance_for_rent_exemption(0);
 
         create_vault_account(svm, vault_pda, rent);
-        
+
         // Create the user vault
         let deposit_amount = 1_000_000u64;
 
-        create_vault_account(svm, instruction_vault, 
-                rent + deposit_amount); // user vault holds deposit
+        create_vault_account(svm, instruction_vault, rent + deposit_amount); // user vault holds deposit
 
         // Build the instruction
         let accounts: Vec<AccountMeta> = vec![
-            AccountMeta::new(game_session_pda, false),        
+            AccountMeta::new(game_session_pda, false),
             AccountMeta::new(instruction_player.pubkey(), false),
-            AccountMeta::new(instruction_vault, false),      
-            AccountMeta::new(vault_pda, false),              
-            AccountMeta::new(global_state, false),       
+            AccountMeta::new(instruction_vault, false),
+            AccountMeta::new(vault_pda, false),
+            AccountMeta::new(global_state, false),
         ];
 
         let args = FinalizeGameAsLostArgs {
@@ -201,7 +182,7 @@ impl TestSetup {
 
     pub fn with_invalid_player(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let instruction_player = Keypair::new(); // Unrecognized player
-        let state_player = Pubkey::new_unique(); 
+        let state_player = Pubkey::new_unique();
 
         let vault = Pubkey::new_unique();
 
@@ -236,7 +217,9 @@ impl TestSetup {
         )
     }
 
-    pub fn with_invalid_public_config(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
+    pub fn with_invalid_public_config(
+        svm: &mut LiteSVM,
+    ) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
 
@@ -254,10 +237,12 @@ impl TestSetup {
         )
     }
 
-    pub fn with_invalid_fail_position(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
+    pub fn with_invalid_fail_position(
+        svm: &mut LiteSVM,
+    ) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
-        
+
         let vault = Pubkey::new_unique();
 
         Self::builder(
@@ -272,7 +257,6 @@ impl TestSetup {
         )
     }
 }
-
 
 #[test]
 fn test_finalize_game_as_lost_success() {
@@ -292,9 +276,8 @@ fn test_finalize_game_as_lost_success() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_transaction_success(svm.send_transaction(transaction));
 }
@@ -317,12 +300,12 @@ fn test_finalize_game_as_lost_fails_with_invalid_player() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidPlayer,
     );
 }
@@ -345,12 +328,12 @@ fn test_finalize_game_as_lost_fails_with_invalid_vault() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidVault,
     );
 }
@@ -373,12 +356,12 @@ fn test_finalize_game_as_lost_fails_with_invalid_public_config() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidGameSeed,
     );
 }
@@ -401,12 +384,12 @@ fn test_finalize_game_as_lost_fails_with_invalid_fail_position() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidFailPosition,
     );
 }

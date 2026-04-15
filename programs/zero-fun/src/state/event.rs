@@ -9,7 +9,7 @@ pub struct MarkGameAsWonEvent {
 
 #[event]
 pub struct InitializeGameEvent {
-    pub game_session:Pubkey,
+    pub game_session: Pubkey,
     pub game_session_account: GameSession,
 }
 
@@ -34,7 +34,7 @@ pub struct FinalizeGameAsWonEvent {
 #[event]
 pub struct FinalizeGameAsLostEvent {
     pub game_session: Pubkey,
-    pub private_config_seed: [u8; HASH_LENGTH]
+    pub private_config_seed: [u8; HASH_LENGTH],
 }
 
 #[event]

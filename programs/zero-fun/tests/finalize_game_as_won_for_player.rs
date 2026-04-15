@@ -1,32 +1,22 @@
 use anchor_lang::InstructionData;
-use litesvm::LiteSVM;
 use anyhow::Result;
+use litesvm::LiteSVM;
 use solana_sdk::{
-    instruction::{Instruction, AccountMeta},
+    instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    signer::{Signer, keypair::Keypair},
-    transaction::Transaction
+    signer::{keypair::Keypair, Signer},
+    transaction::Transaction,
 };
 
 mod common;
 use common::utils::{
-    assert_custom_transaction_error,
-    assert_transaction_success,
-    add_zero_fun_program,
-    create_game_session_account,
-    create_vault_account,
-    create_global_state_account,
+    add_zero_fun_program, assert_custom_transaction_error_at, assert_transaction_success,
+    create_game_session_account, create_global_state_account, create_vault_account,
 };
 
 use zero_fun::{
-    instruction::FinalizeGameAsWonForPlayer,
-    FinalizeGameAsWonForPlayerArgs,
-    GameSession,
-    GameSessionStatus,
-    GlobalState,
-    GameState,
-    HASH_LENGTH,
-    ID as ZERO_FUN_PROGRAM_ID,
+    instruction::FinalizeGameAsWonForPlayer, FinalizeGameAsWonForPlayerArgs, GameSession,
+    GameSessionStatus, GameState, GlobalState, HASH_LENGTH, ID as ZERO_FUN_PROGRAM_ID,
 };
 
 struct TestSetup {}
@@ -44,7 +34,6 @@ impl TestSetup {
         instruction_admin: Keypair,
         game_session_status: GameSessionStatus,
     ) -> Result<([Instruction; 1], Vec<Keypair>)> {
-        
         // Create the admin
         svm.airdrop(&instruction_admin.pubkey(), 1_000_000_000)
             .expect("Could not airdrop to admin");
@@ -64,15 +53,14 @@ impl TestSetup {
             player: state_player,
             deposit: 1_000_000u64,
             status: game_session_status,
-            public_config_seed:[0;HASH_LENGTH],
+            public_config_seed: [0; HASH_LENGTH],
             game_metadata: "metadata".to_string(),
             player_moves: [0u8; zero_fun::MAX_MOVE_COUNT],
             vault: state_player_vault,
             next_player_move_position: 0u8,
         };
 
-        create_game_session_account(svm, game_session_pda, 
-            &game_session_account);
+        create_game_session_account(svm, game_session_pda, &game_session_account);
 
         // Create global state & main vault
         let (vault, vault_bump) =
@@ -100,23 +88,24 @@ impl TestSetup {
         // Create the user vault
         create_vault_account(svm, vault, rent + payout);
 
-        // Create the 
-        create_vault_account(svm, instruction_player_vault, 
-            rent + game_session_account.deposit);
+        // Create the
+        create_vault_account(
+            svm,
+            instruction_player_vault,
+            rent + game_session_account.deposit,
+        );
 
         // Build instruction
         let accounts: Vec<AccountMeta> = vec![
-            AccountMeta::new(game_session_pda, false),           
-            AccountMeta::new(instruction_player.pubkey(), false), 
-            AccountMeta::new(instruction_player_vault, false),          
-            AccountMeta::new(vault, false),                  
-            AccountMeta::new(global_state, false),               
-            AccountMeta::new(instruction_admin.pubkey(), true),  
+            AccountMeta::new(game_session_pda, false),
+            AccountMeta::new(instruction_player.pubkey(), false),
+            AccountMeta::new(instruction_player_vault, false),
+            AccountMeta::new(vault, false),
+            AccountMeta::new(global_state, false),
+            AccountMeta::new(instruction_admin.pubkey(), true),
         ];
 
-
-        let args = 
-            FinalizeGameAsWonForPlayerArgs { payout };
+        let args = FinalizeGameAsWonForPlayerArgs { payout };
 
         let instruction = Instruction {
             program_id: Self::ZERO_FUN_PROGRAM_ID,
@@ -150,7 +139,7 @@ impl TestSetup {
 
     pub fn with_invalid_player(svm: &mut LiteSVM) -> Result<([Instruction; 1], Vec<Keypair>)> {
         let instruction_player = Keypair::new(); // Unrecognized player
-        let state_player = Pubkey::new_unique(); 
+        let state_player = Pubkey::new_unique();
 
         let vault = Pubkey::new_unique();
 
@@ -196,7 +185,7 @@ impl TestSetup {
         let state_player = instruction_player.pubkey();
 
         let vault = Pubkey::new_unique();
-        let state_admin = Keypair::new(); 
+        let state_admin = Keypair::new();
 
         let instruction_admin = Keypair::new(); // Unrecognized admin
 
@@ -217,7 +206,7 @@ impl TestSetup {
         let state_player = instruction_player.pubkey();
 
         let vault = Pubkey::new_unique();
-        
+
         let instruction_admin = Keypair::new();
         let state_admin = instruction_admin.pubkey();
 
@@ -252,9 +241,8 @@ fn test_finalize_game_as_won_for_player_success() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_transaction_success(svm.send_transaction(transaction));
 }
@@ -277,12 +265,12 @@ fn test_finalize_game_as_won_for_player_fails_with_invalid_player() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidPlayer,
     );
 }
@@ -305,12 +293,12 @@ fn test_finalize_game_as_won_for_player_fails_with_invalid_vault() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidVault,
     );
 }
@@ -333,12 +321,12 @@ fn test_finalize_game_as_won_for_player_fails_with_invalid_admin() {
 
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::InvalidAdmin,
     );
 }
@@ -358,15 +346,15 @@ fn test_finalize_game_as_won_for_player_fails_when_not_won() {
     };
 
     let recent_blockhash = svm.latest_blockhash();
-    
+
     let payer = signers[0].pubkey();
 
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
-    assert_custom_transaction_error(
+    assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
+        0,
         zero_fun::GameError::GameSessionNotWon,
     );
 }

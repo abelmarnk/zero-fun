@@ -1,13 +1,11 @@
 use anchor_lang::{
     prelude::*,
-    system_program::{
-        Transfer,
-        transfer
-    }
+    system_program::{transfer, Transfer},
 };
 
 use crate::{
-    GameError, GameSession, GlobalState, HASH_LENGTH, InitializeGameEvent, MAX_BPS, MAX_METADATA_LENGTH
+    GameError, GameSession, GlobalState, InitializeGameEvent, HASH_LENGTH, MAX_BPS,
+    MAX_METADATA_LENGTH,
 };
 
 /// Arguments for initializing a new game session.
@@ -22,13 +20,12 @@ pub struct InitializeGameArgs {
     pub deposit: u64,
 }
 
-
 #[derive(Accounts)]
 #[instruction(args: InitializeGameArgs)]
 pub struct InitializeGameAccounts<'info> {
     #[account(
-        init, 
-        payer = player, 
+        init,
+        payer = player,
         space = 8 + GameSession::INIT_SPACE,
         // The seeds are expected to be unique for each game session because it is a commitment to
         // the both the public configuration which was derived from a random seed.
@@ -37,9 +34,7 @@ pub struct InitializeGameAccounts<'info> {
     )]
     pub game_session: Account<'info, GameSession>,
 
-    #[account(
-        mut
-    )]
+    #[account(mut)]
     pub player: Signer<'info>,
 
     /// CHECK: This is the vault account where the player's deposit will be stored.
@@ -65,22 +60,22 @@ pub struct InitializeGameAccounts<'info> {
 }
 
 #[inline(always)]
-fn checks(
-    ctx: &Context<InitializeGameAccounts>,
-    args: &InitializeGameArgs,
-)-> Result<()>{
-
+fn checks(ctx: &Context<InitializeGameAccounts>, args: &InitializeGameArgs) -> Result<()> {
     // Verify the game metadata length is within bounds.
     require_gte!(
         MAX_METADATA_LENGTH,
-        args.game_metadata.len() ,
+        args.game_metadata.len(),
         GameError::MetadataTooLong
     );
 
     // Verify the deposit is within the allowed maximum deposit.
-    let current_max_deposit = ctx.accounts.vault.lamports().
-        checked_mul(u64::from(ctx.accounts.global_state.max_deposit)).
-        ok_or(ProgramError::ArithmeticOverflow)?/MAX_BPS;
+    let current_max_deposit = ctx
+        .accounts
+        .vault
+        .lamports()
+        .checked_mul(u64::from(ctx.accounts.global_state.max_deposit))
+        .ok_or(ProgramError::ArithmeticOverflow)?
+        / MAX_BPS;
 
     require_gte!(
         current_max_deposit,
@@ -101,9 +96,8 @@ pub fn initialize_game_handler(
     ctx: Context<InitializeGameAccounts>,
     args: InitializeGameArgs,
 ) -> Result<()> {
-    
     checks(&ctx, &args)?;
-    
+
     let game_session = &mut ctx.accounts.game_session;
 
     let now = Clock::get()?.unix_timestamp;
@@ -120,21 +114,18 @@ pub fn initialize_game_handler(
     transfer(
         CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
-            Transfer{
+            Transfer {
                 from: ctx.accounts.player.to_account_info(),
-                to: ctx.accounts.user_vault.to_account_info()
-            }
+                to: ctx.accounts.user_vault.to_account_info(),
+            },
         ),
-        args.deposit
+        args.deposit,
     )?;
 
-
-    emit!(
-        InitializeGameEvent{
-            game_session:ctx.accounts.game_session.key(),
-            game_session_account:(*ctx.accounts.game_session).clone()
-        }
-    );
+    emit!(InitializeGameEvent {
+        game_session: ctx.accounts.game_session.key(),
+        game_session_account: (*ctx.accounts.game_session).clone()
+    });
 
     Ok(())
 }

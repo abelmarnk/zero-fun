@@ -10,20 +10,19 @@ pub struct GlobalState {
     /// and be executed by anyone
     pub message_signer: Pubkey,
     pub max_deposit: u8, // In bps
-    pub max_payout: u8, // In bps
+    pub max_payout: u8,  // In bps
     pub game_state: GameState,
-    pub vault_bump:u8,
+    pub vault_bump: u8,
 }
 
 impl GlobalState {
-    
     pub fn new(
         admin: Pubkey,
         message_signer: Pubkey,
         max_deposit: u8,
         max_payout: u8,
         game_state: GameState,
-        vault_bump:u8,
+        vault_bump: u8,
     ) -> Self {
         Self {
             admin,
@@ -35,11 +34,11 @@ impl GlobalState {
         }
     }
 
-    pub fn is_admin(&self, admin:&Pubkey)->bool{
+    pub fn is_admin(&self, admin: &Pubkey) -> bool {
         self.admin.eq(admin)
     }
 
-    pub fn is_active(&self) -> bool{
+    pub fn is_active(&self) -> bool {
         self.game_state.eq(&crate::GameState::Active)
     }
 
@@ -49,9 +48,9 @@ impl GlobalState {
 }
 
 #[derive(InitSpace, Clone, Copy, AnchorDeserialize, AnchorSerialize, PartialEq)]
-pub enum GameState{
+pub enum GameState {
     Active,
-    Locked
+    Locked,
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
@@ -60,5 +59,5 @@ pub enum GlobalStateUpdate {
     MessageSigner(Pubkey),
     MaxDeposit(u8),
     MaxPayout(u8),
-    GameState(GameState)
+    GameState(GameState),
 }

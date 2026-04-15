@@ -1,36 +1,24 @@
-use anchor_lang::InstructionData;
 use anchor_lang::solana_program::sysvar::instructions::ID as INSTRUCTIONS_SYSVAR_ADDRESS;
-use litesvm::LiteSVM;
+use anchor_lang::InstructionData;
 use anyhow::Result;
+use litesvm::LiteSVM;
 use solana_sdk::{
-    instruction::{Instruction, AccountMeta},
+    instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
-    signer::{Signer, keypair::Keypair},
+    signer::{keypair::Keypair, Signer},
     transaction::Transaction,
 };
 
 mod common;
 use common::utils::{
-    assert_custom_transaction_error_at,
-    assert_transaction_success,
-    add_zero_fun_program,
-    create_game_session_account,
-    create_vault_account,
-    create_global_state_account,
-    set_current_time,
-    ed25519_instruction_for_parts
+    add_zero_fun_program, assert_custom_transaction_error_at, assert_transaction_success,
+    create_game_session_account, create_global_state_account, create_vault_account,
+    ed25519_instruction_for_parts, set_current_time,
 };
 
 use zero_fun::{
-    instruction::FinalizeGameAsWon,
-    FinalizeGameAsWonArgs,
-    GameSession,
-    GameSessionStatus,
-    GlobalState,
-    GameState,
-    FINALIZE_WIN_ACTION,
-    HASH_LENGTH,
-    ID as ZERO_FUN_PROGRAM_ID,
+    instruction::FinalizeGameAsWon, FinalizeGameAsWonArgs, GameSession, GameSessionStatus,
+    GameState, GlobalState, FINALIZE_WIN_ACTION, HASH_LENGTH, ID as ZERO_FUN_PROGRAM_ID,
     MAX_MOVE_COUNT,
 };
 
@@ -62,8 +50,10 @@ struct TestSetup {}
 impl TestSetup {
     const ZERO_FUN_PROGRAM_ID: Pubkey = ZERO_FUN_PROGRAM_ID;
 
-    pub fn builder(svm: &mut LiteSVM, params: FinalizeWonTestParams) -> Result<([Instruction; 2], Vec<Keypair>)> {
-        
+    pub fn builder(
+        svm: &mut LiteSVM,
+        params: FinalizeWonTestParams,
+    ) -> Result<([Instruction; 2], Vec<Keypair>)> {
         // Create the player
         svm.airdrop(&params.instruction_player.pubkey(), 1_000_000_000)
             .expect("Could not airdrop to player");
@@ -85,13 +75,12 @@ impl TestSetup {
             status: GameSessionStatus::Active,
             public_config_seed: params.state_public_config_seed,
             game_metadata: "meta".to_string(),
-            player_moves:[0u8; MAX_MOVE_COUNT],
+            player_moves: [0u8; MAX_MOVE_COUNT],
             vault: params.state_vault,
             next_player_move_position: 0,
         };
 
-        create_game_session_account(svm, game_session, 
-            &game_session_account);
+        create_game_session_account(svm, game_session, &game_session_account);
 
         // Create global state and main vault & message signer
         let message_signer = Keypair::new();
@@ -119,7 +108,7 @@ impl TestSetup {
 
         // Create user vault
         let deposit_amount = 1_000_000u64;
-        
+
         create_vault_account(svm, params.instruction_vault, rent + deposit_amount);
 
         // Set current time
@@ -129,7 +118,7 @@ impl TestSetup {
         let signed_payout_bytes = params.signed_payout.to_le_bytes();
         let signed_deadline_bytes = params.signed_deadline.to_le_bytes();
 
-        let parts: [&[u8];4] = [
+        let parts: [&[u8]; 4] = [
             FINALIZE_WIN_ACTION.as_bytes(),
             &signed_payout_bytes,
             &signed_deadline_bytes,
@@ -141,7 +130,7 @@ impl TestSetup {
         // Build program instruction
         let args = FinalizeGameAsWonArgs {
             payout: params.instruction_payout,
-            deadline: params.instruction_deadline
+            deadline: params.instruction_deadline,
         };
 
         let accounts: Vec<AccountMeta> = vec![
@@ -160,7 +149,10 @@ impl TestSetup {
             data: FinalizeGameAsWon { args }.data(),
         };
 
-        Ok(([ed25519_instruction, program_instruction], vec![params.instruction_player]))
+        Ok((
+            [ed25519_instruction, program_instruction],
+            vec![params.instruction_player],
+        ))
     }
 
     pub fn with_default(svm: &mut LiteSVM) -> Result<([Instruction; 2], Vec<Keypair>)> {
@@ -175,10 +167,10 @@ impl TestSetup {
             state_player,
             instruction_vault: vault,
             state_vault: vault,
-            signed_payout:100u64,
-            instruction_payout:100u64,
-            signed_deadline:1_750_000_000i64,
-            instruction_deadline:1_750_000_000i64,
+            signed_payout: 100u64,
+            instruction_payout: 100u64,
+            signed_deadline: 1_750_000_000i64,
+            instruction_deadline: 1_750_000_000i64,
             state_public_config_seed: public_config_seed,
             signed_public_config_seed: public_config_seed,
             current_time: 1_650_000_000i64,
@@ -189,7 +181,7 @@ impl TestSetup {
         Self::builder(svm, params)
     }
 
-    pub fn with_invalid_player(svm: &mut LiteSVM) -> Result<([Instruction;2], Vec<Keypair>)> {
+    pub fn with_invalid_player(svm: &mut LiteSVM) -> Result<([Instruction; 2], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = Pubkey::new_unique();
 
@@ -216,7 +208,7 @@ impl TestSetup {
         Self::builder(svm, params)
     }
 
-    pub fn with_invalid_vault(svm: &mut LiteSVM) -> Result<([Instruction;2], Vec<Keypair>)> {
+    pub fn with_invalid_vault(svm: &mut LiteSVM) -> Result<([Instruction; 2], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
 
@@ -226,7 +218,7 @@ impl TestSetup {
         let public_config_seed = Pubkey::new_unique().to_bytes();
 
         let params = FinalizeWonTestParams {
-            state_player,           
+            state_player,
             instruction_player,
             state_vault, // different from instruction
             instruction_vault,
@@ -244,7 +236,9 @@ impl TestSetup {
         Self::builder(svm, params)
     }
 
-    pub fn with_mismatched_signed_payout(svm: &mut LiteSVM) -> Result<([Instruction;2], Vec<Keypair>)> {
+    pub fn with_mismatched_signed_payout(
+        svm: &mut LiteSVM,
+    ) -> Result<([Instruction; 2], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
 
@@ -257,7 +251,7 @@ impl TestSetup {
             state_player,
             instruction_vault: vault,
             state_vault: vault,
-            signed_payout: 200, // different from instruction
+            signed_payout: 200,      // different from instruction
             instruction_payout: 100, // different from signed(commited to by the message signer)
             signed_deadline: 1_750_000_000i64,
             instruction_deadline: 1_750_000_000i64,
@@ -271,7 +265,9 @@ impl TestSetup {
         Self::builder(svm, params)
     }
 
-    pub fn with_mismatched_signed_deadline(svm: &mut LiteSVM) -> Result<([Instruction;2], Vec<Keypair>)> {
+    pub fn with_mismatched_signed_deadline(
+        svm: &mut LiteSVM,
+    ) -> Result<([Instruction; 2], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
         let vault = Pubkey::new_unique();
@@ -297,7 +293,9 @@ impl TestSetup {
         Self::builder(svm, params)
     }
 
-    pub fn with_invalid_public_config(svm: &mut LiteSVM) -> Result<([Instruction;2], Vec<Keypair>)> {
+    pub fn with_invalid_public_config(
+        svm: &mut LiteSVM,
+    ) -> Result<([Instruction; 2], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
         let vault = Pubkey::new_unique();
@@ -325,7 +323,7 @@ impl TestSetup {
         Self::builder(svm, params)
     }
 
-    pub fn with_deadline_passed(svm: &mut LiteSVM) -> Result<([Instruction;2], Vec<Keypair>)> {
+    pub fn with_deadline_passed(svm: &mut LiteSVM) -> Result<([Instruction; 2], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
         let vault = Pubkey::new_unique();
@@ -355,7 +353,7 @@ impl TestSetup {
         Self::builder(svm, params)
     }
 
-    pub fn with_payout_exceeds_max(svm: &mut LiteSVM) -> Result<([Instruction;2], Vec<Keypair>)> {
+    pub fn with_payout_exceeds_max(svm: &mut LiteSVM) -> Result<([Instruction; 2], Vec<Keypair>)> {
         let instruction_player = Keypair::new();
         let state_player = instruction_player.pubkey();
         let vault = Pubkey::new_unique();
@@ -371,7 +369,7 @@ impl TestSetup {
             instruction_player,
             state_vault: vault,
             instruction_vault: vault,
-            signed_payout: 10_000_000u64, // > Max payout
+            signed_payout: 10_000_000u64,      // > Max payout
             instruction_payout: 10_000_000u64, // > Max payout
             signed_deadline: 1_750_000_000i64,
             instruction_deadline: 1_750_000_000i64,
@@ -385,7 +383,6 @@ impl TestSetup {
         Self::builder(svm, params)
     }
 }
-
 
 #[test]
 fn test_finalize_game_as_won_success() {
@@ -401,15 +398,14 @@ fn test_finalize_game_as_won_success() {
         Err(error) => panic!("Failed to create instruction: {}", error),
     };
 
-    println!("Data for ED25519 program: {:?}", instructions[0].data);    
+    println!("Data for ED25519 program: {:?}", instructions[0].data);
 
     let payer = signers[0].pubkey();
-    
+
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_transaction_success(svm.send_transaction(transaction));
 }
@@ -429,12 +425,11 @@ fn test_finalize_game_as_won_fails_with_invalid_player() {
     };
 
     let payer = signers[0].pubkey();
-    
+
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
@@ -458,12 +453,11 @@ fn test_finalize_game_as_won_fails_with_invalid_vault() {
     };
 
     let payer = signers[0].pubkey();
-    
+
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
@@ -487,12 +481,11 @@ fn test_finalize_game_as_won_fails_with_mismatched_signed_payout() {
     };
 
     let payer = signers[0].pubkey();
-    
+
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
@@ -516,12 +509,11 @@ fn test_finalize_game_as_won_fails_with_mismatched_signed_deadline() {
     };
 
     let payer = signers[0].pubkey();
-    
+
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
@@ -545,12 +537,11 @@ fn test_finalize_game_as_won_fails_with_invalid_public_config() {
     };
 
     let payer = signers[0].pubkey();
-    
+
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
@@ -574,12 +565,11 @@ fn test_finalize_game_as_won_fails_when_deadline_passed() {
     };
 
     let payer = signers[0].pubkey();
-    
+
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_custom_transaction_error_at(
         svm.send_transaction(transaction),
@@ -603,12 +593,11 @@ fn test_finalize_game_as_won_fails_when_payout_exceeds_max() {
     };
 
     let payer = signers[0].pubkey();
-    
+
     let recent_blockhash = svm.latest_blockhash();
-    
-    let transaction = Transaction::new_signed_with_payer(
-        &instructions, Some(&payer), &signers, recent_blockhash,
-    );
+
+    let transaction =
+        Transaction::new_signed_with_payer(&instructions, Some(&payer), &signers, recent_blockhash);
 
     assert_custom_transaction_error_at(
         svm.send_transaction(transaction),

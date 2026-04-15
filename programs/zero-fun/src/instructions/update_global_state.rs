@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 
 use crate::{GameError, GlobalState, GlobalStateUpdate, UpdateGlobalStateEvent};
 
-
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
 pub struct UpdateGlobalStateArgs {
     pub update: GlobalStateUpdate,
@@ -17,9 +16,7 @@ pub struct UpdateGlobalStateAccounts<'info> {
 }
 
 #[inline(always)]
-fn checks(
-    ctx: &Context<UpdateGlobalStateAccounts>,
-)->Result<()>{
+fn checks(ctx: &Context<UpdateGlobalStateAccounts>) -> Result<()> {
     // Only the current admin can update the global state.
     require!(
         ctx.accounts.global_state.is_admin(ctx.accounts.admin.key),
@@ -33,7 +30,6 @@ pub fn update_global_state_handler(
     ctx: Context<UpdateGlobalStateAccounts>,
     args: UpdateGlobalStateArgs,
 ) -> Result<()> {
-
     checks(&ctx)?;
 
     let global_state = &mut ctx.accounts.global_state;
@@ -50,18 +46,16 @@ pub fn update_global_state_handler(
         }
         GlobalStateUpdate::MaxPayout(new_max_payout) => {
             global_state.max_payout = new_max_payout;
-        },
+        }
         GlobalStateUpdate::GameState(new_game_state) => {
             global_state.game_state = new_game_state;
         }
     }
 
-    emit!(
-        UpdateGlobalStateEvent{
-            admin_at_time_of_update:ctx.accounts.admin.key(),
-            update: args.update
-        }
-    );
+    emit!(UpdateGlobalStateEvent {
+        admin_at_time_of_update: ctx.accounts.admin.key(),
+        update: args.update
+    });
 
     Ok(())
 }
